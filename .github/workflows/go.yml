@@ -1,0 +1,63 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            extension: 
+          - goos: linux
+            goarch: arm64
+            extension: 
+          - goos: windows
+            goarch: amd64
+            extension: .exe
+
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17 
+      
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -o "${{ github.repository }}-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }}" -v ./...
+      
+      - name: Zip the binary
+        run: |
+          zip "${{ github.repository }}-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip" "${{ github.repository }}-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }}"
+          
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "./${{ github.repository }}-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
+          asset_name: "${{ github.repository }}-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
+          asset_content_type: application/zip
