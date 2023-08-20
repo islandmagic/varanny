@@ -16,6 +16,8 @@ import (
 	"github.com/kardianos/service"
 )
 
+var version = "0.0.1"
+
 type Config struct {
 	Name string
 	Port int
@@ -256,7 +258,7 @@ func handleConnection(conn net.Conn, cmdVaraFM *exec.Cmd, cmdVaraHF *exec.Cmd) {
 		conn.Write([]byte("OK\n"))
 
 	case "VERSION":
-		conn.Write([]byte("1.0\n"))
+		conn.Write([]byte(version + "\n"))
 
 	default:
 		conn.Write([]byte("Invalid command\n"))
