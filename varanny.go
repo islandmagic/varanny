@@ -16,7 +16,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.1"
+var version = "0.0.6"
 
 type Config struct {
 	Name string
@@ -42,23 +42,31 @@ type program struct {
 
 func (p *program) Start(s service.Service) error {
 	// Look for exec
-	fmExec, err := exec.LookPath(p.ExecFM)
-	if err != nil {
-		return fmt.Errorf("Failed to find executable %q: %v", p.ExecFM, err)
+	if p.ExecFM != "" {
+		fmExec, err := exec.LookPath(p.ExecFM)
+		if err != nil {
+			return fmt.Errorf("Failed to find executable %q: %v", p.ExecFM, err)
+		}
+
+		p.cmdfm = createCommand(fmExec)
+		p.cmdfm.Dir = filepath.Dir(fmExec)
+		p.cmdfm.Env = os.Environ()
+	} else {
+		logger.Info("No VARA FM executable defined")
 	}
 
-	hfExec, err := exec.LookPath(p.ExecHF)
-	if err != nil {
-		return fmt.Errorf("Failed to find executable %q: %v", p.ExecHF, err)
+	if p.ExecHF != "" {
+		hfExec, err := exec.LookPath(p.ExecHF)
+		if err != nil {
+			return fmt.Errorf("Failed to find executable %q: %v", p.ExecHF, err)
+		}
+
+		p.cmdhf = createCommand(hfExec)
+		p.cmdhf.Dir = filepath.Dir(hfExec)
+		p.cmdhf.Env = os.Environ()
+	} else {
+		logger.Info("No VARA HF executable defined")
 	}
-
-	p.cmdfm = createCommand(fmExec)
-	p.cmdfm.Dir = filepath.Dir(fmExec)
-	p.cmdfm.Env = os.Environ()
-
-	p.cmdhf = createCommand(hfExec)
-	p.cmdhf.Dir = filepath.Dir(hfExec)
-	p.cmdhf.Env = os.Environ()
 
 	go p.run()
 	return nil
@@ -102,10 +110,10 @@ func (p *program) run() {
 func (p *program) Stop(s service.Service) error {
 	close(p.exit)
 	logger.Info("Stopping ", p.Name)
-	if p.cmdfm.Process != nil {
+	if p.cmdfm != nil && p.cmdfm.Process != nil {
 		p.cmdfm.Process.Kill()
 	}
-	if p.cmdhf.Process != nil {
+	if p.cmdhf != nil && p.cmdhf.Process != nil {
 		p.cmdhf.Process.Kill()
 	}
 	if service.Interactive() {
@@ -222,37 +230,44 @@ func handleConnection(conn net.Conn, cmdVaraFM *exec.Cmd, cmdVaraHF *exec.Cmd) {
 	command := strings.TrimSpace(string(buffer[:n]))
 	switch command {
 	case "START VARAFM":
-		if cmdVaraFM.Process != nil {
-			cmdVaraFM.Process.Kill()
-		}
-		err := cmdVaraFM.Start()
-		if err != nil {
-			log.Fatal(err)
-			conn.Write([]byte("ERROR\n"))
+		if cmdVaraFM != nil {
+			if cmdVaraFM.Process != nil {
+				cmdVaraFM.Process.Kill()
+			}
+			err := cmdVaraFM.Start()
+			if err != nil {
+				log.Fatal(err)
+				conn.Write([]byte("ERROR\n"))
+			} else {
+				conn.Write([]byte("OK\n"))
+			}
 		} else {
 			conn.Write([]byte("OK\n"))
 		}
-
 	case "START VARAHF":
-		if cmdVaraHF.Process != nil {
-			cmdVaraHF.Process.Kill()
-		}
-		err := cmdVaraHF.Start()
-		if err != nil {
-			log.Fatal(err)
-			conn.Write([]byte("ERROR\n"))
+		if cmdVaraFM != nil {
+			if cmdVaraHF.Process != nil {
+				cmdVaraHF.Process.Kill()
+			}
+			err := cmdVaraHF.Start()
+			if err != nil {
+				log.Fatal(err)
+				conn.Write([]byte("ERROR\n"))
+			} else {
+				conn.Write([]byte("OK\n"))
+			}
 		} else {
 			conn.Write([]byte("OK\n"))
 		}
 
 	case "STOP VARAFM":
-		if cmdVaraFM.Process != nil {
+		if cmdVaraFM != nil && cmdVaraFM.Process != nil {
 			cmdVaraFM.Process.Kill()
 		}
 		conn.Write([]byte("OK\n"))
 
 	case "STOP VARAHF":
-		if cmdVaraHF.Process != nil {
+		if cmdVaraHF != nil && cmdVaraHF.Process != nil {
 			cmdVaraHF.Process.Kill()
 		}
 		conn.Write([]byte("OK\n"))

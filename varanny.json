@@ -1,6 +1,6 @@
 {
 	"Name": "VARA Modem",
-  "Port": 8210,
+  "Port": 8273,
 	"ExecFM": "C:\\VARA FM\\VARAFM.exe",
 	"ExecHF": "C:\\VARA\\VARA.exe",
   "PortFM": 8300,
