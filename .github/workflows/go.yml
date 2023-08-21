@@ -62,18 +62,9 @@ jobs:
 
       - name: Upload Release Assets
         id: upload_release_assets
-        run: |
-          for zip_file in ./*.zip; do
-            if [ -f "$zip_file" ]; then
-              asset_path="./$zip_file"
-              asset_name="$zip_file"
-              
-              echo "Uploading asset: $asset_name"
-              
-              curl \
-                --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                --header "Content-Type: application/zip" \
-                --upload-file "$asset_path" \
-                "${{ steps.create_release.outputs.upload_url }}?name=$asset_name"
-           fi
-          done
+        uses: dwenegar/upload-release-assets@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_id: ${{ steps.create_release.outputs.id }}
+          assets_path: *.zip
