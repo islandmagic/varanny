@@ -73,9 +73,7 @@ jobs:
               curl \
                 --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                 --header "Content-Type: application/zip" \
-                --data-binary "@$asset_path" \
-                "$UPLOAD_URL?name=$asset_name"
-            fi
+                --upload-file "$asset_path" \
+                "${{ steps.create_release.outputs.upload_url }}?name=$asset_name"
+           fi
           done
-        env:
-          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
