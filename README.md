@@ -45,7 +45,7 @@ Supported commands
 
 To set up `varanny`:
 
-1. Download the zip file suitable for your platform.
+1. [Download](https://github.com/islandmagic/varanny/releases/latest) the zip file suitable for your platform.
 1. Extract the zip into a local directory.
 1. Launch the `varanny` executable. You could either place a shortcut in the startup folder or write a script to start it at boot time.
 
