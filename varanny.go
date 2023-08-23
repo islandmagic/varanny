@@ -18,14 +18,32 @@ import (
 
 var version = "0.0.6"
 
+/*
+{
+	"Name": "VARA Modem",
+  "Port": 8273,
+  "VaraFM" : {
+  	"Cmd": "C:\\VARA FM\\VARAFM.exe",
+    "Args": "",
+    "Port": 8300
+  },
+  "VaraHF" : {
+	  "Cmd": "C:\\VARA\\VARA.exe",
+    "Args": "",
+    "Port": 8400
+  }
+}
+*/
 type Config struct {
-	Name string
-	Port int
-
-	ExecFM string
-	ExecHF string
-	PortFM int
-	PortHF int
+	Name   string `json:"Name"`
+	Port   int    `json:"Port"`
+	VaraFM Exec   `json:"VaraFM"`
+	VaraHF Exec   `json:"VaraHF"`
+}
+type Exec struct {
+	Cmd  string `json:"Cmd"`
+	Args string `json:"Args"`
+	Port int    `json:"Port"`
 }
 
 var logger service.Logger
@@ -40,28 +58,35 @@ type program struct {
 	cmdhf *exec.Cmd
 }
 
+func createCommand(path string, args ...string) *exec.Cmd {
+	cmd := exec.Command(path, args...)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd
+}
+
 func (p *program) Start(s service.Service) error {
 	// Look for exec
-	if p.ExecFM != "" {
-		fmExec, err := exec.LookPath(p.ExecFM)
+	if p.VaraFM.Cmd != "" {
+		fmExec, err := exec.LookPath(p.VaraFM.Cmd)
 		if err != nil {
-			return fmt.Errorf("Failed to find executable %q: %v", p.ExecFM, err)
+			return fmt.Errorf("Failed to find executable %q: %v", p.VaraFM.Cmd, err)
 		}
 
-		p.cmdfm = createCommand(fmExec)
+		p.cmdfm = createCommand(fmExec, p.VaraFM.Args)
 		p.cmdfm.Dir = filepath.Dir(fmExec)
 		p.cmdfm.Env = os.Environ()
 	} else {
 		logger.Info("No VARA FM executable defined")
 	}
 
-	if p.ExecHF != "" {
-		hfExec, err := exec.LookPath(p.ExecHF)
+	if p.VaraHF.Cmd != "" {
+		hfExec, err := exec.LookPath(p.VaraHF.Cmd)
 		if err != nil {
-			return fmt.Errorf("Failed to find executable %q: %v", p.ExecHF, err)
+			return fmt.Errorf("Failed to find executable %q: %v", p.VaraHF.Cmd, err)
 		}
 
-		p.cmdhf = createCommand(hfExec)
+		p.cmdhf = createCommand(hfExec, p.VaraHF.Args)
 		p.cmdhf.Dir = filepath.Dir(hfExec)
 		p.cmdhf.Env = os.Environ()
 	} else {
@@ -83,8 +108,8 @@ func (p *program) run() {
 		}
 	}()
 
-	fmPortStr := strconv.Itoa(p.PortFM)
-	hfPortStr := strconv.Itoa(p.PortHF)
+	fmPortStr := strconv.Itoa(p.VaraFM.Port)
+	hfPortStr := strconv.Itoa(p.VaraHF.Port)
 
 	server, err := zeroconf.Register(p.Name, "_vara-modem._tcp", "local.", p.Port, []string{"fm=" + fmPortStr, "hf=" + hfPortStr}, nil)
 	if err != nil {
@@ -210,13 +235,6 @@ func main() {
 	if err != nil {
 		logger.Error(err)
 	}
-}
-
-func createCommand(path string) *exec.Cmd {
-	cmd := exec.Command(path)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd
 }
 
 func handleConnection(conn net.Conn, cmdVaraFM *exec.Cmd, cmdVaraHF *exec.Cmd) {

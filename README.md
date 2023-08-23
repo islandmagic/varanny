@@ -4,7 +4,7 @@
 
 `varanny` steps in to address these limitations, acting as a 'nanny' for VARA. It offers two primary capabilities:
 
-1. **Service Announcement**: `varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and port configured for that instance.
+**Service Announcement**: `varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and port configured for that instance.
 
 The service is broadcasted as `_vara-modem._tcp` and contains a TXT entry for the ports of VARA FM and VARA HF applications represetned as `fm=8300,hf=8400` for example.
 
@@ -31,7 +31,7 @@ DATE: ---Sun 20 Aug 2023---
 ```
 The servie accnouncment has been inspired by https://github.com/hessu/aprs-specs/blob/master/TCP-KISS-DNS-SD.md
 
-1. **Remote Management**: `varanny` allows client applications to remotely start and stop the VARA program. This is particularly useful in headless applications, especially when VARA FM and VARA HF share the same sound card interface. Furthermore, VARA, when running on a *nix system via Wine, fails to rebind to its ports after a connection is closed. This means that the VARA application must be restarted after each connection, and `varanny` facilitates this process.
+**Remote Management**: `varanny` allows client applications to remotely start and stop the VARA program. This is particularly useful in headless applications, especially when VARA FM and VARA HF share the same sound card interface. Furthermore, VARA, when running on a *nix system via Wine, fails to rebind to its ports after a connection is closed. This means that the VARA application must be restarted after each connection, and `varanny` facilitates this process.
 
 Supported commands
 
