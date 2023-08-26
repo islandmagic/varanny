@@ -52,3 +52,24 @@ To set up `varanny`:
 ## Configuration
 
 To configure `varanny`, edit the `varanny.json` file as per your needs. If you do not want the VARA executable to be managed by `varanny`, leave the executable path field empty ("").
+
+### Running with Wine on Linux
+
+Ensure VARA is installed in its default location and wine executable is in the PATH.
+
+```
+{
+  "Name": "VARA Modem",
+  "Port": 8273,
+  "VaraFM" : {
+    "Cmd": "wine",
+    "Args": "C:\\VARA FM\\VARAFM.exe",
+    "Port": 8300
+  },
+  "VaraHF" : {
+    "Cmd": "wine",
+    "Args": "C:\\VARA\\VARA.exe",
+    "Port": 8400
+  }
+}
+```
