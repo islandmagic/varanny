@@ -64,12 +64,20 @@ Ensure VARA is installed in its default location and wine executable is in the P
   "VaraFM" : {
     "Cmd": "wine",
     "Args": "C:\\VARA FM\\VARAFM.exe",
-    "Port": 8300
+    "Port": 8300,
+    "CatCtrl": {
+      "Port": 4532,
+      "Dialect": "hamlib"
+    }    
   },
   "VaraHF" : {
     "Cmd": "wine",
     "Args": "C:\\VARA\\VARA.exe",
-    "Port": 8400
+    "Port": 8400,
+    "CatCtrl": {
+      "Port": 4532,
+      "Dialect": "hamlib"
+    }    
   }
 }
 ```
