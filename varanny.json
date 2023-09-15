@@ -4,11 +4,19 @@
   "VaraFM" : {
   	"Cmd": "C:\\VARA FM\\VARAFM.exe",
     "Args": "",
-    "Port": 8300
+    "Port": 8300,
+    "CatCtrl": {
+      "Port": 4532,
+      "Dialect": "hamlib"
+    }
   },
   "VaraHF" : {
 	  "Cmd": "C:\\VARA\\VARA.exe",
     "Args": "",
-    "Port": 8400
+    "Port": 8400,
+    "CatCtrl": {
+      "Port": 4532,
+      "Dialect": "hamlib"
+    }
   }
 }

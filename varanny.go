@@ -16,34 +16,23 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.6"
+var version = "0.0.7"
 
-/*
-{
-	"Name": "VARA Modem",
-  "Port": 8273,
-  "VaraFM" : {
-  	"Cmd": "C:\\VARA FM\\VARAFM.exe",
-    "Args": "",
-    "Port": 8300
-  },
-  "VaraHF" : {
-	  "Cmd": "C:\\VARA\\VARA.exe",
-    "Args": "",
-    "Port": 8400
-  }
-}
-*/
 type Config struct {
 	Name   string `json:"Name"`
 	Port   int    `json:"Port"`
-	VaraFM Exec   `json:"VaraFM"`
-	VaraHF Exec   `json:"VaraHF"`
+	VaraFM Exec   `json:"VaraFM,omitempty"`
+	VaraHF Exec   `json:"VaraHF,omitempty"`
 }
 type Exec struct {
-	Cmd  string `json:"Cmd"`
-	Args string `json:"Args"`
-	Port int    `json:"Port"`
+	Cmd     string  `json:"Cmd"`
+	Args    string  `json:"Args"`
+	Port    int     `json:"Port"`
+	CatCtrl CatCtrl `json:"CatCtrl,omitempty"`
+}
+type CatCtrl struct {
+	Port    int    `json:"Port"`
+	Dialect string `json:"Dialect"`
 }
 
 var logger service.Logger
@@ -98,7 +87,7 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) run() {
-	logger.Info("Starting ", p.Name)
+	logger.Info("Starting ", p.Name, " listening on port ", p.Port)
 
 	defer func() {
 		if service.Interactive() {
@@ -108,10 +97,44 @@ func (p *program) run() {
 		}
 	}()
 
+	var options []string
+
 	fmPortStr := strconv.Itoa(p.VaraFM.Port)
+
+	// Include VaraFM attributes only if they are not empty
+	if fmPortStr != "" {
+		options = append(options, "fm="+fmPortStr)
+	}
+
+	fmCatPortStr := strconv.Itoa(p.VaraFM.CatCtrl.Port)
+	fmCatDialectStr := p.VaraFM.CatCtrl.Dialect
+
+	if fmCatPortStr != "" {
+		options = append(options, "fmcat="+fmCatPortStr)
+	}
+	if fmCatDialectStr != "" {
+		options = append(options, "fmcatd="+fmCatDialectStr)
+	}
+
 	hfPortStr := strconv.Itoa(p.VaraHF.Port)
 
-	server, err := zeroconf.Register(p.Name, "_vara-modem._tcp", "local.", p.Port, []string{"fm=" + fmPortStr, "hf=" + hfPortStr}, nil)
+	// Include VaraHF attributes only if they are not empty
+	if hfPortStr != "" {
+		options = append(options, "hf="+hfPortStr)
+	}
+
+	hfCatPortStr := strconv.Itoa(p.VaraHF.CatCtrl.Port)
+	hfCatDialectStr := p.VaraHF.CatCtrl.Dialect
+
+	if hfCatPortStr != "" {
+		options = append(options, "hfcat="+hfCatPortStr)
+	}
+	if hfCatDialectStr != "" {
+		options = append(options, "hfcatd="+hfCatDialectStr)
+	}
+
+	server, err := zeroconf.Register(p.Name, "_vara-modem._tcp", "local.", p.Port, options, nil)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -243,59 +266,45 @@ func handleConnection(conn net.Conn, cmdVaraFM *exec.Cmd, cmdVaraHF *exec.Cmd) {
 	n, err := conn.Read(buffer)
 	if err != nil {
 		log.Println(err)
+		conn.Close()
+		return
 	}
 
 	command := strings.TrimSpace(string(buffer[:n]))
 	switch command {
 	case "START VARAFM":
-		if cmdVaraFM != nil {
-			if cmdVaraFM.Process != nil {
-				cmdVaraFM.Process.Kill()
-			}
-			err := cmdVaraFM.Start()
-			if err != nil {
-				log.Fatal(err)
-				conn.Write([]byte("ERROR\n"))
-			} else {
-				conn.Write([]byte("OK\n"))
-			}
-		} else {
-			conn.Write([]byte("OK\n"))
-		}
+		startCommand(cmdVaraFM, conn)
 	case "START VARAHF":
-		if cmdVaraFM != nil {
-			if cmdVaraHF.Process != nil {
-				cmdVaraHF.Process.Kill()
-			}
-			err := cmdVaraHF.Start()
-			if err != nil {
-				log.Fatal(err)
-				conn.Write([]byte("ERROR\n"))
-			} else {
-				conn.Write([]byte("OK\n"))
-			}
-		} else {
-			conn.Write([]byte("OK\n"))
-		}
-
+		startCommand(cmdVaraHF, conn)
 	case "STOP VARAFM":
-		if cmdVaraFM != nil && cmdVaraFM.Process != nil {
-			cmdVaraFM.Process.Kill()
-		}
-		conn.Write([]byte("OK\n"))
-
+		stopCommand(cmdVaraFM, conn)
 	case "STOP VARAHF":
-		if cmdVaraHF != nil && cmdVaraHF.Process != nil {
-			cmdVaraHF.Process.Kill()
-		}
-		conn.Write([]byte("OK\n"))
-
+		stopCommand(cmdVaraHF, conn)
 	case "VERSION":
 		conn.Write([]byte(version + "\n"))
-
 	default:
 		conn.Write([]byte("Invalid command\n"))
 	}
 
 	conn.Close()
+}
+
+func startCommand(cmd *exec.Cmd, conn net.Conn) {
+	if cmd != nil && cmd.Process != nil {
+		cmd.Process.Kill()
+	}
+	err := cmd.Start()
+	if err != nil {
+		conn.Write([]byte("ERROR\n"))
+		log.Fatal(err)
+	} else {
+		conn.Write([]byte("OK\n"))
+	}
+}
+
+func stopCommand(cmd *exec.Cmd, conn net.Conn) {
+	if cmd != nil && cmd.Process != nil {
+		cmd.Process.Kill()
+	}
+	conn.Write([]byte("OK\n"))
 }
