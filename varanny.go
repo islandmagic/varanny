@@ -16,7 +16,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.8"
+var version = "0.0.10"
 
 type Config struct {
 	Name   string `json:"Name"`
@@ -86,13 +86,9 @@ func (p *program) Start(s service.Service) error {
 	return nil
 }
 
-func addOption(options string, key string, value string) string {
+func addOption(options []string, key string, value string) []string {
 	if value != "" {
-		if options == "" {
-			options = key + "=" + value
-		} else {
-			options += "," + key + "=" + value
-		}
+		options = append(options, key+"="+value+";")
 	}
 	return options
 }
@@ -108,7 +104,7 @@ func (p *program) run() {
 		}
 	}()
 
-	options := ""
+	options := []string{}
 
 	fmPortStr := strconv.Itoa(p.VaraFM.Port)
 	options = addOption(options, "fmport", fmPortStr)
@@ -128,7 +124,7 @@ func (p *program) run() {
 	hfCatDialectStr := p.VaraHF.CatCtrl.Dialect
 	options = addOption(options, "hfcatdialect", hfCatDialectStr)
 
-	server, err := zeroconf.Register(p.Name, "_vara-modem._tcp", "local.", p.Port, []string{options}, nil)
+	server, err := zeroconf.Register(p.Name, "_vara-modem._tcp", "local.", p.Port, options, nil)
 
 	if err != nil {
 		log.Fatal(err)
