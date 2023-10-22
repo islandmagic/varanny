@@ -86,6 +86,17 @@ func (p *program) Start(s service.Service) error {
 	return nil
 }
 
+func addOption(options string, key string, value string) string {
+	if value != "" {
+		if options == "" {
+			options = key + "=" + value
+		} else {
+			options += "," + key + "=" + value
+		}
+	}
+	return options
+}
+
 func (p *program) run() {
 	logger.Info("Starting ", p.Name, " listening on port ", p.Port)
 
@@ -97,43 +108,27 @@ func (p *program) run() {
 		}
 	}()
 
-	var options []string
+	options := ""
 
 	fmPortStr := strconv.Itoa(p.VaraFM.Port)
-
-	// Include VaraFM attributes only if they are not empty
-	if fmPortStr != "" {
-		options = append(options, "fm="+fmPortStr)
-	}
+	options = addOption(options, "fmport", fmPortStr)
 
 	fmCatPortStr := strconv.Itoa(p.VaraFM.CatCtrl.Port)
-	fmCatDialectStr := p.VaraFM.CatCtrl.Dialect
+	options = addOption(options, "fmcatport", fmCatPortStr)
 
-	if fmCatPortStr != "" {
-		options = append(options, "fmcat="+fmCatPortStr)
-	}
-	if fmCatDialectStr != "" {
-		options = append(options, "fmcatd="+fmCatDialectStr)
-	}
+	fmCatDialectStr := p.VaraFM.CatCtrl.Dialect
+	options = addOption(options, "fmcatdialect", fmCatDialectStr)
 
 	hfPortStr := strconv.Itoa(p.VaraHF.Port)
-
-	// Include VaraHF attributes only if they are not empty
-	if hfPortStr != "" {
-		options = append(options, "hf="+hfPortStr)
-	}
+	options = addOption(options, "hfport", hfPortStr)
 
 	hfCatPortStr := strconv.Itoa(p.VaraHF.CatCtrl.Port)
+	options = addOption(options, "hfcatport", hfCatPortStr)
+
 	hfCatDialectStr := p.VaraHF.CatCtrl.Dialect
+	options = addOption(options, "hfcatdialect", hfCatDialectStr)
 
-	if hfCatPortStr != "" {
-		options = append(options, "hfcat="+hfCatPortStr)
-	}
-	if hfCatDialectStr != "" {
-		options = append(options, "hfcatd="+hfCatDialectStr)
-	}
-
-	server, err := zeroconf.Register(p.Name, "_vara-modem._tcp", "local.", p.Port, options, nil)
+	server, err := zeroconf.Register(p.Name, "_vara-modem._tcp", "local.", p.Port, []string{options}, nil)
 
 	if err != nil {
 		log.Fatal(err)
