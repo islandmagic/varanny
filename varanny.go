@@ -16,7 +16,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.10"
+var version = "0.0.11"
 
 type Config struct {
 	Port   int  `json:"Port"`
