@@ -19,12 +19,12 @@ import (
 var version = "0.0.10"
 
 type Config struct {
-	Name   string `json:"Name"`
-	Port   int    `json:"Port"`
-	VaraFM Exec   `json:"VaraFM,omitempty"`
-	VaraHF Exec   `json:"VaraHF,omitempty"`
+	Port   int  `json:"Port"`
+	VaraFM Exec `json:"VaraFM,omitempty"`
+	VaraHF Exec `json:"VaraHF,omitempty"`
 }
 type Exec struct {
+	Name    string  `json:"Name"`
 	Cmd     string  `json:"Cmd"`
 	Args    string  `json:"Args"`
 	Port    int     `json:"Port"`
@@ -94,7 +94,7 @@ func addOption(options []string, key string, value string) []string {
 }
 
 func (p *program) run() {
-	logger.Info("Starting ", p.Name, " listening on port ", p.Port)
+	logger.Info("Starting launcher, listening on port ", p.Port)
 
 	defer func() {
 		if service.Interactive() {
@@ -104,32 +104,40 @@ func (p *program) run() {
 		}
 	}()
 
-	options := []string{}
+	if p.VaraFM.Port != 0 {
+		options := []string{}
 
-	fmPortStr := strconv.Itoa(p.VaraFM.Port)
-	options = addOption(options, "fmport", fmPortStr)
-
-	fmCatPortStr := strconv.Itoa(p.VaraFM.CatCtrl.Port)
-	options = addOption(options, "fmcatport", fmCatPortStr)
-
-	fmCatDialectStr := p.VaraFM.CatCtrl.Dialect
-	options = addOption(options, "fmcatdialect", fmCatDialectStr)
-
-	hfPortStr := strconv.Itoa(p.VaraHF.Port)
-	options = addOption(options, "hfport", hfPortStr)
-
-	hfCatPortStr := strconv.Itoa(p.VaraHF.CatCtrl.Port)
-	options = addOption(options, "hfcatport", hfCatPortStr)
-
-	hfCatDialectStr := p.VaraHF.CatCtrl.Dialect
-	options = addOption(options, "hfcatdialect", hfCatDialectStr)
-
-	server, err := zeroconf.Register(p.Name, "_vara-modem._tcp", "local.", p.Port, options, nil)
-
-	if err != nil {
-		log.Fatal(err)
+		if p.cmdfm != nil {
+			options = addOption(options, "launchport", strconv.Itoa(p.Port))
+		}
+		if p.VaraFM.CatCtrl.Port != 0 {
+			options = addOption(options, "catport", strconv.Itoa(p.VaraFM.CatCtrl.Port))
+			options = addOption(options, "catdialect", p.VaraFM.CatCtrl.Dialect)
+		}
+		fm_server, err := zeroconf.Register(p.VaraFM.Name, "_varafm-modem._tcp", "local.", p.VaraFM.Port, options, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer fm_server.Shutdown()
 	}
-	defer server.Shutdown()
+
+	if p.VaraHF.Port != 0 {
+		options := []string{}
+
+		if p.cmdhf != nil {
+			options = addOption(options, "launchport", strconv.Itoa(p.Port))
+		}
+		if p.VaraHF.CatCtrl.Port != 0 {
+			options = addOption(options, "catport", strconv.Itoa(p.VaraHF.CatCtrl.Port))
+			options = addOption(options, "catdialect", p.VaraHF.CatCtrl.Dialect)
+		}
+
+		hf_server, err := zeroconf.Register(p.VaraHF.Name, "_varahf-modem._tcp", "local.", p.VaraHF.Port, options, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer hf_server.Shutdown()
+	}
 
 	portStr := strconv.Itoa(p.Port)
 	ln, err := net.Listen("tcp", ":"+portStr)
@@ -148,7 +156,7 @@ func (p *program) run() {
 
 func (p *program) Stop(s service.Service) error {
 	close(p.exit)
-	logger.Info("Stopping ", p.Name)
+	logger.Info("Stopping laucnher")
 	if p.cmdfm != nil && p.cmdfm.Process != nil {
 		p.cmdfm.Process.Kill()
 	}

@@ -1,7 +1,7 @@
 {
-	"Name": "VARA Modem",
   "Port": 8273,
   "VaraFM" : {
+    "Name": "VARA FM Modem",
   	"Cmd": "C:\\VARA FM\\VARAFM.exe",
     "Args": "",
     "Port": 8300,
@@ -11,7 +11,8 @@
     }
   },
   "VaraHF" : {
-	  "Cmd": "C:\\VARA\\VARA.exe",
+    "Name": "VARA HF Modem",
+    "Cmd": "C:\\VARA\\VARA.exe",
     "Args": "",
     "Port": 8400,
     "CatCtrl": {

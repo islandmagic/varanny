@@ -6,28 +6,34 @@
 
 **Service Announcement**: `varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and port configured for that instance.
 
-The service is broadcasted as `_vara-modem._tcp` and contains a TXT entry for the ports of VARA FM and VARA HF applications represetned as `fm=8300,hf=8400` for example.
+The service are broadcasted as `_varafm-modem._tcp` and `_varahf-modem._tcp` and contain a TXT entry with `;` separated options.
+
+`launchport` port of varanny launcher. Present if there is a cmd specified to launch the executable
+`catport` port of the cat control daemon if any
+`catdialect` type of cat control daemon. Currently only `hamlib` is supported
 
 To test if the service is running, you can validate from a terminal on macOS
 
 ```
-$ dns-sd -B _vara-modem._tcp
-Browsing for _vara-modem._tcp
-DATE: ---Sun 20 Aug 2023---
-21:32:11.683  ...STARTING...
+$ dns-sd -B _varahf-modem._tcp
+Browsing for _varahf-modem._tcp
+DATE: ---Tue 24 Oct 2023---
+18:20:18.020  ...STARTING...
 Timestamp     A/R    Flags  if Domain               Service Type         Instance Name
-21:32:11.684  Add        2   9 local.               _vara-modem._tcp.    VARA Modem
+18:20:18.021  Add        3   1 local.               _varahf-modem._tcp.  VARA HF Modem
+18:20:18.021  Add        3   6 local.               _varahf-modem._tcp.  VARA HF Modem
+18:20:18.021  Add        2   7 local.               _varahf-modem._tcp.  VARA HF Modem
 ```
 
 and resolve the service address with
 
 ```
-$ dns-sd -L "VARA Modem" _vara-modem._tcp local
-Lookup VARA Modem._vara-modem._tcp.local
-DATE: ---Sun 20 Aug 2023---
-21:32:15.552  ...STARTING...
-21:32:15.553  VARA\032Modem._vara-modem._tcp.local. can be reached at t4windoz.local.:8210 (interface 9)
- fm=8300 hf=8400
+$ dns-sd -L "VARA HF Modem" _varahf-modem._tcp local
+Lookup VARA HF Modem._varahf-modem._tcp.local
+DATE: ---Tue 24 Oct 2023---
+18:21:15.325  ...STARTING...
+18:21:15.326  VARA\032HF\032Modem._varahf-modem._tcp.local. can be reached at cervin.local.local.:8400 (interface 1) Flags: 1
+ launchport=8273\; catport=4532\; catdialect=hamlib\;
 ```
 The service accnouncment has been inspired by https://github.com/hessu/aprs-specs/blob/master/TCP-KISS-DNS-SD.md
 
@@ -59,9 +65,9 @@ Ensure VARA is installed in its default location and wine executable is in the P
 
 ```
 {
-  "Name": "VARA Modem",
   "Port": 8273,
   "VaraFM" : {
+    "Name": "VARA FM Modem",
     "Cmd": "wine",
     "Args": "C:\\VARA FM\\VARAFM.exe",
     "Port": 8300,
@@ -71,6 +77,7 @@ Ensure VARA is installed in its default location and wine executable is in the P
     }    
   },
   "VaraHF" : {
+    "Name": "VARA HF Modem",
     "Cmd": "wine",
     "Args": "C:\\VARA\\VARA.exe",
     "Port": 8400,
