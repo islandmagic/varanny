@@ -15,7 +15,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.12"
+var version = "0.0.13"
 
 type Config struct {
 	Port   int  `json:"Port"`
@@ -261,27 +261,32 @@ func main() {
 func handleConnection(conn net.Conn, cmdVaraFM *exec.Cmd, cmdVaraHF *exec.Cmd) {
 	buffer := make([]byte, 1024)
 
-	n, err := conn.Read(buffer)
-	if err != nil {
-		log.Println(err)
-		conn.Close()
-		return
-	}
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			log.Println(err)
+			conn.Close()
+			return
+		}
 
-	command := strings.TrimSpace(string(buffer[:n]))
-	switch command {
-	case "START VARAFM":
-		startCommand(cmdVaraFM, conn)
-	case "START VARAHF":
-		startCommand(cmdVaraHF, conn)
-	case "STOP VARAFM":
-		stopCommand(cmdVaraFM, conn)
-	case "STOP VARAHF":
-		stopCommand(cmdVaraHF, conn)
-	case "VERSION":
-		conn.Write([]byte(version + "\n"))
-	default:
-		conn.Write([]byte("Invalid command\n"))
+		command := strings.TrimSpace(string(buffer[:n]))
+		switch command {
+		case "START VARAFM":
+			startCommand(cmdVaraFM, conn)
+		case "START VARAHF":
+			startCommand(cmdVaraHF, conn)
+		case "STOP VARAFM":
+			stopCommand(cmdVaraFM, conn)
+		case "STOP VARAHF":
+			stopCommand(cmdVaraHF, conn)
+		case "VERSION":
+			conn.Write([]byte(version + "\n"))
+		case "EXIT":
+			conn.Close()
+			return
+		default:
+			conn.Write([]byte("Invalid command\n"))
+		}
 	}
 }
 
