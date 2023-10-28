@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -16,7 +15,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.11"
+var version = "0.0.12"
 
 type Config struct {
 	Port   int  `json:"Port"`
@@ -59,7 +58,7 @@ func (p *program) Start(s service.Service) error {
 	if p.VaraFM.Cmd != "" {
 		fmExec, err := exec.LookPath(p.VaraFM.Cmd)
 		if err != nil {
-			return fmt.Errorf("Failed to find executable %q: %v", p.VaraFM.Cmd, err)
+			//return fmt.Errorf("Failed to find executable %q: %v", p.VaraFM.Cmd, err)
 		}
 
 		p.cmdfm = createCommand(fmExec, p.VaraFM.Args)
@@ -72,7 +71,7 @@ func (p *program) Start(s service.Service) error {
 	if p.VaraHF.Cmd != "" {
 		hfExec, err := exec.LookPath(p.VaraHF.Cmd)
 		if err != nil {
-			return fmt.Errorf("Failed to find executable %q: %v", p.VaraHF.Cmd, err)
+			//return fmt.Errorf("Failed to find executable %q: %v", p.VaraHF.Cmd, err)
 		}
 
 		p.cmdhf = createCommand(hfExec, p.VaraHF.Args)
@@ -284,8 +283,6 @@ func handleConnection(conn net.Conn, cmdVaraFM *exec.Cmd, cmdVaraHF *exec.Cmd) {
 	default:
 		conn.Write([]byte("Invalid command\n"))
 	}
-
-	conn.Close()
 }
 
 func startCommand(cmd *exec.Cmd, conn net.Conn) {
