@@ -15,7 +15,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.13"
+var version = "0.0.14"
 
 type Config struct {
 	Port   int  `json:"Port"`
@@ -149,7 +149,17 @@ func (p *program) run() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		go handleConnection(conn, p.cmdfm, p.cmdhf)
+		go func() {
+			cmdfm := createCommand(p.cmdfm.Path, p.cmdfm.Args...)
+			cmdfm.Dir = p.cmdfm.Dir
+			cmdfm.Env = os.Environ()
+
+			cmdhf := createCommand(p.cmdhf.Path, p.cmdhf.Args...)
+			cmdhf.Dir = p.cmdhf.Dir
+			cmdhf.Env = os.Environ()
+
+			handleConnection(conn, cmdfm, cmdhf)
+		}()
 	}
 }
 
@@ -292,7 +302,7 @@ func handleConnection(conn net.Conn, cmdVaraFM *exec.Cmd, cmdVaraHF *exec.Cmd) {
 
 func startCommand(cmd *exec.Cmd, conn net.Conn) {
 	if cmd != nil && cmd.Process != nil {
-		cmd.Process.Kill()
+		stopCommand(cmd, conn)
 	}
 	err := cmd.Start()
 	if err != nil {
@@ -305,7 +315,10 @@ func startCommand(cmd *exec.Cmd, conn net.Conn) {
 
 func stopCommand(cmd *exec.Cmd, conn net.Conn) {
 	if cmd != nil && cmd.Process != nil {
-		cmd.Process.Kill()
+		err := cmd.Process.Kill()
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	conn.Write([]byte("OK\n"))
 }
