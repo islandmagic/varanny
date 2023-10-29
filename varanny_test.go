@@ -1,17 +1,23 @@
 package main
 
 import (
+	"os/exec"
 	"testing"
 )
 
 func TestCreateCommand(t *testing.T) {
-	path := "/path/to/command"
+	path := "echo" // Use a standard command that exists on most systems
 	args := []string{"arg1", "arg2"}
 
 	cmd := createCommand(path, args...)
 
-	if cmd.Path != path {
-		t.Errorf("Expected command path to be %s, but got %s", path, cmd.Path)
+	expectedPath, err := exec.LookPath(path)
+	if err != nil {
+		t.Fatalf("Cannot find command %s in PATH: %v", path, err)
+	}
+
+	if cmd.Path != expectedPath {
+		t.Errorf("Expected command path to be %s, but got %s", expectedPath, cmd.Path)
 	}
 
 	if len(cmd.Args) != len(args)+1 {

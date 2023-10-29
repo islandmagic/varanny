@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -15,15 +16,15 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.14"
+var version = "0.0.15"
 
 type Config struct {
-	Port   int  `json:"Port"`
-	VaraFM Exec `json:"VaraFM,omitempty"`
-	VaraHF Exec `json:"VaraHF,omitempty"`
+	Port   int     `json:"Port"`
+	Modems []Modem `json:"Modems"`
 }
-type Exec struct {
+type Modem struct {
 	Name    string  `json:"Name"`
+	Type    string  `json:"Type"`
 	Cmd     string  `json:"Cmd"`
 	Args    string  `json:"Args"`
 	Port    int     `json:"Port"`
@@ -32,6 +33,8 @@ type Exec struct {
 type CatCtrl struct {
 	Port    int    `json:"Port"`
 	Dialect string `json:"Dialect"`
+	Cmd     string `json:"Cmd"`
+	Args    string `json:"Args"`
 }
 
 var logger service.Logger
@@ -41,44 +44,23 @@ type program struct {
 	service service.Service
 
 	*Config
-
-	cmdfm *exec.Cmd
-	cmdhf *exec.Cmd
-}
-
-func createCommand(path string, args ...string) *exec.Cmd {
-	cmd := exec.Command(path, args...)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd
 }
 
 func (p *program) Start(s service.Service) error {
-	// Look for exec
-	if p.VaraFM.Cmd != "" {
-		fmExec, err := exec.LookPath(p.VaraFM.Cmd)
-		if err != nil {
-			//return fmt.Errorf("Failed to find executable %q: %v", p.VaraFM.Cmd, err)
-		}
-
-		p.cmdfm = createCommand(fmExec, p.VaraFM.Args)
-		p.cmdfm.Dir = filepath.Dir(fmExec)
-		p.cmdfm.Env = os.Environ()
-	} else {
-		logger.Info("No VARA FM executable defined")
+	// Iterate over modems and exit if no modem is defined
+	if len(p.Modems) == 0 {
+		logger.Info("No modems defined")
+		return nil
 	}
 
-	if p.VaraHF.Cmd != "" {
-		hfExec, err := exec.LookPath(p.VaraHF.Cmd)
-		if err != nil {
-			//return fmt.Errorf("Failed to find executable %q: %v", p.VaraHF.Cmd, err)
+	// Iterate over modems and validate that all cmd map to an existing file
+	for _, modem := range p.Modems {
+		if modem.Cmd != "" {
+			_, err := exec.LookPath(modem.Cmd)
+			if err != nil {
+				return fmt.Errorf("Failed to find executable %q: %v", modem.Cmd, err)
+			}
 		}
-
-		p.cmdhf = createCommand(hfExec, p.VaraHF.Args)
-		p.cmdhf.Dir = filepath.Dir(hfExec)
-		p.cmdhf.Env = os.Environ()
-	} else {
-		logger.Info("No VARA HF executable defined")
 	}
 
 	go p.run()
@@ -103,41 +85,42 @@ func (p *program) run() {
 		}
 	}()
 
-	if p.VaraFM.Port != 0 {
-		options := []string{}
+	// Iterate over modem and announce them
+	for _, modem := range p.Modems {
+		if modem.Port != 0 {
+			options := []string{}
 
-		if p.cmdfm != nil {
-			options = addOption(options, "launchport", strconv.Itoa(p.Port))
+			// Advertise the launcher port if the modem has a command
+			if modem.Cmd != "" || modem.CatCtrl.Cmd != "" {
+				options = addOption(options, "launchport", strconv.Itoa(p.Port))
+			}
+
+			if modem.CatCtrl.Port != 0 {
+				options = addOption(options, "catport", strconv.Itoa(modem.CatCtrl.Port))
+				options = addOption(options, "catdialect", modem.CatCtrl.Dialect)
+			}
+
+			// Advertise the modem based on its type
+			switch modem.Type {
+			case "fm":
+				fm_server, err := zeroconf.Register(modem.Name, "_varafm-modem._tcp", "local.", modem.Port, options, nil)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer fm_server.Shutdown()
+			case "hf":
+				hf_server, err := zeroconf.Register(modem.Name, "_varahf-modem._tcp", "local.", modem.Port, options, nil)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer hf_server.Shutdown()
+			default:
+				log.Fatal("Unknown modem type: ", modem.Type)
+			}
 		}
-		if p.VaraFM.CatCtrl.Port != 0 {
-			options = addOption(options, "catport", strconv.Itoa(p.VaraFM.CatCtrl.Port))
-			options = addOption(options, "catdialect", p.VaraFM.CatCtrl.Dialect)
-		}
-		fm_server, err := zeroconf.Register(p.VaraFM.Name, "_varafm-modem._tcp", "local.", p.VaraFM.Port, options, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer fm_server.Shutdown()
 	}
 
-	if p.VaraHF.Port != 0 {
-		options := []string{}
-
-		if p.cmdhf != nil {
-			options = addOption(options, "launchport", strconv.Itoa(p.Port))
-		}
-		if p.VaraHF.CatCtrl.Port != 0 {
-			options = addOption(options, "catport", strconv.Itoa(p.VaraHF.CatCtrl.Port))
-			options = addOption(options, "catdialect", p.VaraHF.CatCtrl.Dialect)
-		}
-
-		hf_server, err := zeroconf.Register(p.VaraHF.Name, "_varahf-modem._tcp", "local.", p.VaraHF.Port, options, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer hf_server.Shutdown()
-	}
-
+	// Start the launcher server
 	portStr := strconv.Itoa(p.Port)
 	ln, err := net.Listen("tcp", ":"+portStr)
 	if err != nil {
@@ -150,28 +133,14 @@ func (p *program) run() {
 			log.Fatal(err)
 		}
 		go func() {
-			cmdfm := createCommand(p.cmdfm.Path, p.cmdfm.Args...)
-			cmdfm.Dir = p.cmdfm.Dir
-			cmdfm.Env = os.Environ()
-
-			cmdhf := createCommand(p.cmdhf.Path, p.cmdhf.Args...)
-			cmdhf.Dir = p.cmdhf.Dir
-			cmdhf.Env = os.Environ()
-
-			handleConnection(conn, cmdfm, cmdhf)
+			handleConnection(conn, p)
 		}()
 	}
 }
 
 func (p *program) Stop(s service.Service) error {
 	close(p.exit)
-	logger.Info("Stopping laucnher")
-	if p.cmdfm != nil && p.cmdfm.Process != nil {
-		p.cmdfm.Process.Kill()
-	}
-	if p.cmdhf != nil && p.cmdhf.Process != nil {
-		p.cmdhf.Process.Kill()
-	}
+	logger.Info("Stopping launcher")
 	if service.Interactive() {
 		os.Exit(0)
 	}
@@ -192,6 +161,7 @@ func getConfigPath() (string, error) {
 }
 
 func getConfig(path string) (*Config, error) {
+	log.Println("Loading configuration from", path)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -208,14 +178,107 @@ func getConfig(path string) (*Config, error) {
 	return conf, nil
 }
 
-func main() {
-	svcFlag := flag.String("service", "", "Control the system service.")
-	flag.Parse()
-
-	configPath, err := getConfigPath()
+// Create a command with the given path and arguments
+func createCommand(path string, args ...string) *exec.Cmd {
+	fullPath, err := exec.LookPath(path)
 	if err != nil {
 		log.Fatal(err)
 	}
+	cmd := exec.Command(fullPath, args...)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	cmd.Dir = filepath.Dir(fullPath)
+	cmd.Env = os.Environ()
+	return cmd
+}
+
+func handleConnection(conn net.Conn, p *program) {
+	buffer := make([]byte, 1024)
+	var modemCmd *exec.Cmd
+	var catCtrlCmd *exec.Cmd
+
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			log.Println(err)
+			conn.Close()
+			return
+		}
+
+		command := strings.TrimSpace(string(buffer[:n]))
+		if strings.Split(command, " ")[0] == "start" {
+			// modem name could have spaces in it
+			modemName := strings.TrimPrefix(command, "start ")
+			for _, modem := range p.Modems {
+				if modem.Name == modemName {
+					var err error
+					if modem.Cmd != "" {
+						modemCmd = createCommand(modem.Cmd, strings.Split(modem.Args, " ")...)
+						err = modemCmd.Start()
+					}
+
+					if err == nil && modem.CatCtrl.Cmd != "" {
+						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
+						err = catCtrlCmd.Start()
+					}
+
+					if err != nil {
+						conn.Write([]byte("ERROR\n"))
+						conn.Close()
+						log.Fatal(err)
+					} else {
+						conn.Write([]byte("OK\n"))
+					}
+					break
+				}
+			}
+		} else {
+			switch command {
+			case "stop":
+				var err error
+				if modemCmd != nil && modemCmd.Process != nil {
+					err = modemCmd.Process.Kill()
+				}
+				if err == nil && catCtrlCmd != nil && catCtrlCmd.Process != nil {
+					err = catCtrlCmd.Process.Kill()
+				}
+				if err != nil {
+					conn.Write([]byte("ERROR\n"))
+					conn.Close()
+					log.Fatal(err)
+				} else {
+					conn.Write([]byte("OK\n"))
+					conn.Close()
+				}
+				return
+			case "version":
+				conn.Write([]byte(version + "\n"))
+			case "exit":
+				conn.Close()
+				return
+			default:
+				conn.Write([]byte("Invalid command\n"))
+			}
+		}
+	}
+}
+
+func main() {
+	svcFlag := flag.String("service", "", "Control the system service.")
+	configFlag := flag.String("config", "", "Path to the configuration file.")
+	flag.Parse()
+
+	configPath := ""
+	if len(*configFlag) != 0 {
+		configPath = *configFlag
+	} else {
+		var err error
+		configPath, err = getConfigPath()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	config, err := getConfig(configPath)
 	if err != nil {
 		log.Fatal(err)
@@ -266,59 +329,4 @@ func main() {
 	if err != nil {
 		logger.Error(err)
 	}
-}
-
-func handleConnection(conn net.Conn, cmdVaraFM *exec.Cmd, cmdVaraHF *exec.Cmd) {
-	buffer := make([]byte, 1024)
-
-	for {
-		n, err := conn.Read(buffer)
-		if err != nil {
-			log.Println(err)
-			conn.Close()
-			return
-		}
-
-		command := strings.TrimSpace(string(buffer[:n]))
-		switch command {
-		case "START VARAFM":
-			startCommand(cmdVaraFM, conn)
-		case "START VARAHF":
-			startCommand(cmdVaraHF, conn)
-		case "STOP VARAFM":
-			stopCommand(cmdVaraFM, conn)
-		case "STOP VARAHF":
-			stopCommand(cmdVaraHF, conn)
-		case "VERSION":
-			conn.Write([]byte(version + "\n"))
-		case "EXIT":
-			conn.Close()
-			return
-		default:
-			conn.Write([]byte("Invalid command\n"))
-		}
-	}
-}
-
-func startCommand(cmd *exec.Cmd, conn net.Conn) {
-	if cmd != nil && cmd.Process != nil {
-		stopCommand(cmd, conn)
-	}
-	err := cmd.Start()
-	if err != nil {
-		conn.Write([]byte("ERROR\n"))
-		log.Fatal(err)
-	} else {
-		conn.Write([]byte("OK\n"))
-	}
-}
-
-func stopCommand(cmd *exec.Cmd, conn net.Conn) {
-	if cmd != nil && cmd.Process != nil {
-		err := cmd.Process.Kill()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	conn.Write([]byte("OK\n"))
 }
