@@ -16,7 +16,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.1"
+var version = "0.1.2"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -300,29 +300,8 @@ func handleConnection(conn net.Conn, p *program) {
 		} else {
 			switch command {
 			case "stop":
-				var err1, err2, err3 error
-				if modemCmd != nil && modemCmd.Process != nil {
-					err1 = modemCmd.Process.Kill()
-					modemCmd = nil
-				}
-				if catCtrlCmd != nil && catCtrlCmd.Process != nil {
-					err2 = catCtrlCmd.Process.Kill()
-					catCtrlCmd = nil
-				}
-				if configPath != "" {
-					err3 = os.Rename(configPath+".varanny.bak", configPath)
-					configPath = ""
-				}
-				if err1 != nil || err2 != nil || err3 != nil {
-					conn.Write([]byte("ERROR\n"))
-					conn.Close()
-					log.Println(err1)
-					log.Println(err2)
-					log.Println(err3)
-				} else {
-					conn.Write([]byte("OK\n"))
-					conn.Close()
-				}
+				conn.Write([]byte("OK\n"))
+				conn.Close()
 				return
 			case "version":
 				conn.Write([]byte(version + "\n"))
