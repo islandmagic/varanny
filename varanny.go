@@ -1,3 +1,15 @@
+/*
+	(c) 2023 by Island Magic Co. All rights reserved.
+
+	This program is a launcher for VARA modem programs. It can be used to start and stop
+	the modem programs remotely. It also advertises the modem programs using zeroconf.
+	The launcher can be run as a service on Windows and Linux.
+	The launcher is configured using a JSON file. The default name of the configuration
+	file is the same as the name of the executable with the extension changed to .json.
+	The configuration file can be specified using the -config command line option.
+	The launcher can be run as a service using the -service command line option.
+*/
+
 package main
 
 import (
@@ -16,7 +28,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.2"
+var version = "0.1.3"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -305,9 +317,6 @@ func handleConnection(conn net.Conn, p *program) {
 				return
 			case "version":
 				conn.Write([]byte(version + "\n"))
-			case "exit":
-				conn.Close()
-				return
 			default:
 				conn.Write([]byte("Invalid command\n"))
 			}
@@ -318,7 +327,20 @@ func handleConnection(conn net.Conn, p *program) {
 func main() {
 	svcFlag := flag.String("service", "", "Control the system service.")
 	configFlag := flag.String("config", "", "Path to the configuration file.")
+	versionFlag := flag.Bool("version", false, "Print version and exit.")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println("varanny version " + version)
+		return
+	}
 
 	configPath := ""
 	if len(*configFlag) != 0 {

@@ -1,16 +1,16 @@
 # varanny
 
-`varanny` is designed to enhance the functionality of VARA, a popular software modem used in radio amateur digital transmissions. VARA operates via two TCP ports, one for commands and the other for data. The use of TCP/IP for interaction allows the VARA modem software to run on a headless computer connected to a radio, while client applications can be executed on a different network device. However, VARA wasn't designed to run as a service, hence it has certain limitations.
+`varanny` is an enhancement tool for VARA, a widely used software modem in amateur radio digital transmissions. VARA functions through two TCP ports - one for commands, the other for data. This TCP/IP interaction enables the VARA modem software to run on a radio-connected, headless computer, while client applications operate on a separate network device. However, since VARA wasn't designed to function as a service, this setup comes with certain limitations.
 
 `varanny` steps in to address these limitations, acting as a 'nanny' for VARA. It offers two primary capabilities:
 
 ## Service Announcement
-`varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and command port configured for that instance. In VARA modems, the data port if always +1 from the command port.
+`varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and command port configured for that instance. In VARA modems, the data port number is always one more than the command port number.
 
 The service are broadcasted as `_varafm-modem._tcp` and `_varahf-modem._tcp` depending on the modem type and contain a TXT entry with `;` separated options.
 
 ### Supported options
-* `launchport=` port of varanny launcher. Present if there is a cmd specified to launch the executable.
+* `launchport=` port of varanny launcher. Present if there is a cmd specified in the configuration file.
 * `catport=` port of the cat control daemon, if any.
 * `catdialect` type of cat control daemon. Currently only `hamlib` is supported.
 
@@ -37,21 +37,30 @@ DATE: ---Tue 24 Oct 2023---
 18:21:15.326  VARA\032HF\032Modem._varahf-modem._tcp.local. can be reached at cervin.local.local.:8400 (interface 1) Flags: 1
  launchport=8273\; catport=4532\; catdialect=hamlib\;
 ```
+
 The service accnouncment has been inspired by https://github.com/hessu/aprs-specs/blob/master/TCP-KISS-DNS-SD.md
 
 ## Remote Management
 `varanny` allows client applications to remotely start and stop the VARA program. This is particularly useful in headless applications, especially when VARA FM and VARA HF share the same sound card interface. Furthermore, VARA, when running on a *nix system via Wine, fails to rebind to its ports after a connection is closed. This means that the VARA application must be restarted after each connection, and `varanny` facilitates this process. This particular issue has been discussed in this [thread](https://groups.io/g/VARA-MODEM/topic/lunchbag_portable_hf_mail/97360073).
 
 ### Supported commands
-Connection to varanny are meant to be session oriented. A client conects, starts a modem, perform some operations and then stops the modem. Varanny will close the connection once the modem is stopped.
+Connections to `varanny` are session-oriented. A client connects, requests to start a modem, performs some operations, and then stops it. Once the modem is stopped, `varanny` will close the connection and restore the VARA configuration file if necessary.
 
-* `start <modem name>` - Starts the executables configured for `<modem name>`
-* `stop` - Stops the executables and close the connection
+* `start <modem name>` - Starts the modem and rig control defined for `<modem name>`
+* `stop` - Stops the processes and close the connection
 * `version` - Returns varanny version
-* `exit` - Force close the connection
+
+### Multiple Configurations
+VARA doesn't offer command line configuration options. Therefore, changes like sound card name, PTT com port, etc., need to be made through its GUI. `varnnay` can help manage multiple configurations for you. It automatically swaps the `.ini` configuration file that VARA reads, allowing for seamless configuration changes before each session and restoring the default settings afterward. To create a new configuration, follow these steps:  
+
+1. Open the VARA application. 
+2. Adjust the parameters to your preference. 
+3. Close the application. 
+4. Go to the VARA installation directory (`C:\VARA` or `C:\VARA FM` by default) and duplicate the `VARA.ini` or `VARAFM.ini` file. 
+
+It's a good idea to use a naming convention that reflects what the configuration file represents. For instance, you might name a configuration set up for a Digirig sound card `VARA.digirig.ini`. You can then specify the configuration to use in the `varanny` config file.
 
 ## Installation
-
 To set up `varanny`:
 
 1. [Download](https://github.com/islandmagic/varanny/releases/latest) the zip file suitable for your platform.
@@ -59,7 +68,6 @@ To set up `varanny`:
 1. Launch the `varanny` executable. You could either place a shortcut in the startup folder or write a script to start it at boot time.
 
 ## Configuration
-
 To configure `varanny`, edit the `varanny.json` file as per your needs. If you do not want the VARA executable to be managed by `varanny`, leave the cmd path field empty ("").
 
 ### Configuration Attributes
@@ -79,42 +87,7 @@ Configuration must be a valid `.json` file. You can define as many "modems" as y
 * `Cmd` fully quality path to executable to start the cat control agent.
 * `Args` arguments to pass the executable.
 
-### Sample Configuration
-
-{
-  "Port": 8273,
-  "Modems" : [
-    {
-      "Name": "IC705 VARAFM",
-      "Type": "fm",
-      "Cmd": "C:\\VARA FM\\VARAFM.exe",
-      "Args": "",
-      "Config": "C:\\VARA FM\\VARAFM.ic705.ini",
-      "Port": 8300
-    },
-    {
-      "Name": "THD74 VARAFM",
-      "Type": "fm",
-      "Cmd": "C:\\VARA FM\\VARAFM.exe",
-      "Args": "",
-      "Config": "C:\\VARA FM\\VARAFM.thd74.ini",
-      "Port": 8300
-    },    
-    {
-      "Name": "IC705 VARAHF",
-      "Type": "hf",
-      "Cmd": "C:\\VARA\\VARA.exe",
-      "Args": "",
-      "Port": 8400,
-      "CatCtrl": {
-        "Port": 4532,
-        "Dialect": "hamlib",
-        "Cmd": "C:\\Program Files\\hamlib-w64-4.5.5\\bin\\rigctld.exe",
-        "Args": "-m 3073 -r com7"
-      }
-    }
-  ]
-}
+[Sample Configuration](https://github.com/islandmagic/varanny/blob/master/varanny.json)
 
 ### Running with Wine on Linux
 Ensure VARA is installed in its default location and wine executable is in the PATH.
