@@ -2,23 +2,32 @@
   "Port": 8273,
   "Modems" : [
     {
-    "Name": "IC705 VARAFM",
-    "Type": "fm",
-  	"Cmd": "C:\\VARA FM\\VARAFM.exe",
-    "Args": "",
-    "Port": 8300
+      "Name": "IC705 VARAFM",
+      "Type": "fm",
+      "Cmd": "C:\\VARA FM\\VARAFM.exe",
+      "Args": "",
+      "Config": "C:\\VARA FM\\VARAFM.ic705.ini",
+      "Port": 8300
     },
     {
-    "Name": "IC705 VARAHF",
-    "Type": "hf",
-    "Cmd": "C:\\VARA\\VARA.exe",
-    "Args": "",
-    "Port": 8400,
-    "CatCtrl": {
-      "Port": 4532,
-      "Dialect": "hamlib",
-      "Cmd": "\\Program Files\\hamlib-w64-4.5.5\bin\rigctld.exe",
-      "Args": "-m 3073 -r com7"
+      "Name": "THD74 VARAFM",
+      "Type": "fm",
+      "Cmd": "C:\\VARA FM\\VARAFM.exe",
+      "Args": "",
+      "Config": "C:\\VARA FM\\VARAFM.thd74.ini",
+      "Port": 8300
+    },    
+    {
+      "Name": "IC705 VARAHF",
+      "Type": "hf",
+      "Cmd": "C:\\VARA\\VARA.exe",
+      "Args": "",
+      "Port": 8400,
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib",
+        "Cmd": "C:\\Program Files\\hamlib-w64-4.5.5\bin\rigctld.exe",
+        "Args": "-m 3073 -r com7"
       }
     }
   ]

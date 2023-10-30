@@ -16,7 +16,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.0.15"
+var version = "0.1.0"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -27,6 +27,7 @@ type Modem struct {
 	Type    string  `json:"Type"`
 	Cmd     string  `json:"Cmd"`
 	Args    string  `json:"Args"`
+	Config  string  `json:"Config"`
 	Port    int     `json:"Port"`
 	CatCtrl CatCtrl `json:"CatCtrl,omitempty"`
 }
@@ -46,6 +47,14 @@ type program struct {
 	*Config
 }
 
+func assertExecutable(path string) error {
+	_, err := exec.LookPath(path)
+	if err != nil {
+		return fmt.Errorf("Failed to find executable %q: %v", path, err)
+	}
+	return nil
+}
+
 func (p *program) Start(s service.Service) error {
 	// Iterate over modems and exit if no modem is defined
 	if len(p.Modems) == 0 {
@@ -56,9 +65,15 @@ func (p *program) Start(s service.Service) error {
 	// Iterate over modems and validate that all cmd map to an existing file
 	for _, modem := range p.Modems {
 		if modem.Cmd != "" {
-			_, err := exec.LookPath(modem.Cmd)
+			err := assertExecutable(modem.Cmd)
 			if err != nil {
-				return fmt.Errorf("Failed to find executable %q: %v", modem.Cmd, err)
+				return err
+			}
+		}
+		if modem.CatCtrl.Cmd != "" {
+			err := assertExecutable(modem.CatCtrl.Cmd)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -182,7 +197,8 @@ func getConfig(path string) (*Config, error) {
 func createCommand(path string, args ...string) *exec.Cmd {
 	fullPath, err := exec.LookPath(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil
 	}
 	cmd := exec.Command(fullPath, args...)
 	cmd.Stdout = nil
@@ -196,6 +212,7 @@ func handleConnection(conn net.Conn, p *program) {
 	buffer := make([]byte, 1024)
 	var modemCmd *exec.Cmd
 	var catCtrlCmd *exec.Cmd
+	var configPath string
 
 	for {
 		n, err := conn.Read(buffer)
@@ -209,43 +226,77 @@ func handleConnection(conn net.Conn, p *program) {
 		if strings.Split(command, " ")[0] == "start" {
 			// modem name could have spaces in it
 			modemName := strings.TrimPrefix(command, "start ")
+			found := false
 			for _, modem := range p.Modems {
 				if modem.Name == modemName {
+					found = true
 					var err error
 					if modem.Cmd != "" {
 						modemCmd = createCommand(modem.Cmd, strings.Split(modem.Args, " ")...)
-						err = modemCmd.Start()
+						if modemCmd != nil {
+							// Swap the config file to the one defined in the modem
+							if modem.Config != "" {
+								// Rename existing config file
+								// Extract path from modem Cmd to find existing config file
+								if modem.Type == "fm" {
+									configPath = filepath.Join(filepath.Dir(modem.Cmd), "VARAFM.ini")
+								} else {
+									configPath = filepath.Join(filepath.Dir(modem.Cmd), "VARA.ini")
+								}
+								err = os.Rename(configPath, configPath+".varanny.bak")
+								if err != nil {
+									log.Println(err)
+								} else {
+									// Link to the new config file
+									err = os.Symlink(modem.Config, configPath)
+									if err != nil {
+										log.Println(err)
+									}
+								}
+							}
+							err = modemCmd.Start()
+						}
 					}
 
 					if err == nil && modem.CatCtrl.Cmd != "" {
 						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
-						err = catCtrlCmd.Start()
+						if catCtrlCmd != nil {
+							err = catCtrlCmd.Start()
+						}
 					}
 
 					if err != nil {
 						conn.Write([]byte("ERROR\n"))
 						conn.Close()
-						log.Fatal(err)
+						log.Println(err)
 					} else {
 						conn.Write([]byte("OK\n"))
 					}
 					break
 				}
 			}
+			if !found {
+				conn.Write([]byte("ERROR Modem name '" + modemName + "' not found\n"))
+			}
 		} else {
 			switch command {
 			case "stop":
-				var err error
+				var err1, err2, err3 error
 				if modemCmd != nil && modemCmd.Process != nil {
-					err = modemCmd.Process.Kill()
+					err1 = modemCmd.Process.Kill()
 				}
-				if err == nil && catCtrlCmd != nil && catCtrlCmd.Process != nil {
-					err = catCtrlCmd.Process.Kill()
+				if catCtrlCmd != nil && catCtrlCmd.Process != nil {
+					err2 = catCtrlCmd.Process.Kill()
 				}
-				if err != nil {
+				if configPath != "" {
+					err3 = os.Rename(configPath+".varanny.bak", configPath)
+				}
+				if err1 != nil || err2 != nil || err3 != nil {
 					conn.Write([]byte("ERROR\n"))
 					conn.Close()
-					log.Fatal(err)
+					log.Println(err1)
+					log.Println(err2)
+					log.Println(err3)
 				} else {
 					conn.Write([]byte("OK\n"))
 					conn.Close()

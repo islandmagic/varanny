@@ -4,13 +4,15 @@
 
 `varanny` steps in to address these limitations, acting as a 'nanny' for VARA. It offers two primary capabilities:
 
-**Service Announcement**: `varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and port configured for that instance.
+## Service Announcement
+`varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and command port configured for that instance. In VARA modems, the data port if always +1 from the command port.
 
-The service are broadcasted as `_varafm-modem._tcp` and `_varahf-modem._tcp` and contain a TXT entry with `;` separated options.
+The service are broadcasted as `_varafm-modem._tcp` and `_varahf-modem._tcp` depending on the modem type and contain a TXT entry with `;` separated options.
 
-`launchport` port of varanny launcher. Present if there is a cmd specified to launch the executable
-`catport` port of the cat control daemon if any
-`catdialect` type of cat control daemon. Currently only `hamlib` is supported
+### Supported options
+* `launchport=` port of varanny launcher. Present if there is a cmd specified to launch the executable.
+* `catport=` port of the cat control daemon, if any.
+* `catdialect` type of cat control daemon. Currently only `hamlib` is supported.
 
 To test if the service is running, you can validate from a terminal on macOS
 
@@ -37,15 +39,16 @@ DATE: ---Tue 24 Oct 2023---
 ```
 The service accnouncment has been inspired by https://github.com/hessu/aprs-specs/blob/master/TCP-KISS-DNS-SD.md
 
-**Remote Management**: `varanny` allows client applications to remotely start and stop the VARA program. This is particularly useful in headless applications, especially when VARA FM and VARA HF share the same sound card interface. Furthermore, VARA, when running on a *nix system via Wine, fails to rebind to its ports after a connection is closed. This means that the VARA application must be restarted after each connection, and `varanny` facilitates this process. This particular issue has been discussed in this [thread](https://groups.io/g/VARA-MODEM/topic/lunchbag_portable_hf_mail/97360073).
+## Remote Management
+`varanny` allows client applications to remotely start and stop the VARA program. This is particularly useful in headless applications, especially when VARA FM and VARA HF share the same sound card interface. Furthermore, VARA, when running on a *nix system via Wine, fails to rebind to its ports after a connection is closed. This means that the VARA application must be restarted after each connection, and `varanny` facilitates this process. This particular issue has been discussed in this [thread](https://groups.io/g/VARA-MODEM/topic/lunchbag_portable_hf_mail/97360073).
 
-Supported commands
+### Supported commands
+Connection to varanny are meant to be session oriented. A client conects, starts a modem, perform some operations and then stops the modem. Varanny will close the connection once the modem is stopped.
 
-* `START VARAFM` - Starts the executable configured for VARA FM
-* `STOP VARAFM` - Stops the VARA FM executable
-* `START VARAHF` - Starts the executable configured for VARA HF
-* `STOP VARAHF` - Stops the VARA HF executable
-* `VERSION` - Returns version
+* `start <modem name>` - Starts the executables configured for `<modem name>`
+* `stop` - Stops the executables and close the connection
+* `version` - Returns varanny version
+* `exit` - Force close the connection
 
 ## Installation
 
@@ -57,34 +60,91 @@ To set up `varanny`:
 
 ## Configuration
 
-To configure `varanny`, edit the `varanny.json` file as per your needs. If you do not want the VARA executable to be managed by `varanny`, leave the executable path field empty ("").
+To configure `varanny`, edit the `varanny.json` file as per your needs. If you do not want the VARA executable to be managed by `varanny`, leave the cmd path field empty ("").
+
+### Configuration Attributes
+Configuration must be a valid `.json` file. You can define as many "modems" as you'd like. This can be handy if you use the same computer to connect to multiple radios that require different configurations. If you need to run VARA with different parameters, you can simply clone your VARA directory and configure each copy as necessary.
+
+* `Port` port that varanny agent binds to.
+* `Modems` arrray containing modem definitions.
+* `Name` name the modem will be advertised under. Must be unique.
+* `Type` type of VARA modem, `fm` or `hf`.
+* `Cmd` fully quality path to executable to start this VARA modem.
+* `Args` arguments to pass the executable.
+* `Config` optional path to a VARA configuration file. If present, a backup of the existing VARA.ini or VARAFM.ini file is created and then the specified configuration file is applied. Once the session concludes, the original .ini file is restored. This feature ensures the preservation of original settings while enabling different configurations for specific setups such as a sound card name.
+* `Port` command port defined in the VARA modem application. 
+* `CatCtrl` option cat control definition.
+* `Port` port used by cat control agent.
+* `Dialect` protocol used by cat control agent. Currently only `hamlib` is supported.
+* `Cmd` fully quality path to executable to start the cat control agent.
+* `Args` arguments to pass the executable.
+
+### Sample Configuration
+
+{
+  "Port": 8273,
+  "Modems" : [
+    {
+      "Name": "IC705 VARAFM",
+      "Type": "fm",
+      "Cmd": "C:\\VARA FM\\VARAFM.exe",
+      "Args": "",
+      "Config": "C:\\VARA FM\\VARAFM.ic705.ini",
+      "Port": 8300
+    },
+    {
+      "Name": "THD74 VARAFM",
+      "Type": "fm",
+      "Cmd": "C:\\VARA FM\\VARAFM.exe",
+      "Args": "",
+      "Config": "C:\\VARA FM\\VARAFM.thd74.ini",
+      "Port": 8300
+    },    
+    {
+      "Name": "IC705 VARAHF",
+      "Type": "hf",
+      "Cmd": "C:\\VARA\\VARA.exe",
+      "Args": "",
+      "Port": 8400,
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib",
+        "Cmd": "C:\\Program Files\\hamlib-w64-4.5.5\bin\rigctld.exe",
+        "Args": "-m 3073 -r com7"
+      }
+    }
+  ]
+}
 
 ### Running with Wine on Linux
-
 Ensure VARA is installed in its default location and wine executable is in the PATH.
 
 ```
 {
   "Port": 8273,
-  "VaraFM" : {
-    "Name": "VARA FM Modem",
-    "Cmd": "wine",
-    "Args": "C:\\VARA FM\\VARAFM.exe",
-    "Port": 8300,
-    "CatCtrl": {
-      "Port": 4532,
-      "Dialect": "hamlib"
-    }    
-  },
-  "VaraHF" : {
-    "Name": "VARA HF Modem",
-    "Cmd": "wine",
-    "Args": "C:\\VARA\\VARA.exe",
-    "Port": 8400,
-    "CatCtrl": {
-      "Port": 4532,
-      "Dialect": "hamlib"
-    }    
-  }
+  "Modems": [
+    {
+      "Name": "VARA FM Modem",
+      "Type": "fm",
+      "Cmd": "wine",
+      "Args": "C:\\VARA FM\\VARAFM.exe",
+      "Port": 8300,
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib"
+      }    
+    },
+    {
+      "Name": "VARA HF Modem",
+      "Type": "hf",
+      "Cmd": "wine",
+      "Args": "C:\\VARA\\VARA.exe",
+      "Port": 8400,
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib"
+      }    
+    }
+  ]
 }
 ```
