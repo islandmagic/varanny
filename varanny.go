@@ -16,7 +16,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.0"
+var version = "0.1.1"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -213,6 +213,23 @@ func handleConnection(conn net.Conn, p *program) {
 	var modemCmd *exec.Cmd
 	var catCtrlCmd *exec.Cmd
 	var configPath string
+	var modemConfigPath string
+
+	defer func() {
+		if modemCmd != nil && modemCmd.Process != nil {
+			modemCmd.Process.Kill()
+		}
+		if catCtrlCmd != nil && catCtrlCmd.Process != nil {
+			catCtrlCmd.Process.Kill()
+		}
+		if configPath != "" {
+			if modemConfigPath != "" {
+				os.Rename(configPath, modemConfigPath)
+			}
+			os.Rename(configPath+".varanny.bak", configPath)
+		}
+		conn.Close()
+	}()
 
 	for {
 		n, err := conn.Read(buffer)
@@ -239,16 +256,18 @@ func handleConnection(conn net.Conn, p *program) {
 								// Rename existing config file
 								// Extract path from modem Cmd to find existing config file
 								if modem.Type == "fm" {
-									configPath = filepath.Join(filepath.Dir(modem.Cmd), "VARAFM.ini")
+									configPath = filepath.Join(filepath.Dir(modem.Config), "VARAFM.ini")
 								} else {
-									configPath = filepath.Join(filepath.Dir(modem.Cmd), "VARA.ini")
+									configPath = filepath.Join(filepath.Dir(modem.Config), "VARA.ini")
 								}
-								err = os.Rename(configPath, configPath+".varanny.bak")
+								modemConfigPath = modem.Config
+								// Make backup
+								err := os.Rename(configPath, configPath+".varanny.bak")
 								if err != nil {
 									log.Println(err)
 								} else {
-									// Link to the new config file
-									err = os.Symlink(modem.Config, configPath)
+									// Swap config file
+									err := os.Rename(modemConfigPath, configPath)
 									if err != nil {
 										log.Println(err)
 									}
@@ -284,12 +303,15 @@ func handleConnection(conn net.Conn, p *program) {
 				var err1, err2, err3 error
 				if modemCmd != nil && modemCmd.Process != nil {
 					err1 = modemCmd.Process.Kill()
+					modemCmd = nil
 				}
 				if catCtrlCmd != nil && catCtrlCmd.Process != nil {
 					err2 = catCtrlCmd.Process.Kill()
+					catCtrlCmd = nil
 				}
 				if configPath != "" {
 					err3 = os.Rename(configPath+".varanny.bak", configPath)
+					configPath = ""
 				}
 				if err1 != nil || err2 != nil || err3 != nil {
 					conn.Write([]byte("ERROR\n"))

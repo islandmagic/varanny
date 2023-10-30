@@ -71,7 +71,7 @@ Configuration must be a valid `.json` file. You can define as many "modems" as y
 * `Type` type of VARA modem, `fm` or `hf`.
 * `Cmd` fully quality path to executable to start this VARA modem.
 * `Args` arguments to pass the executable.
-* `Config` optional path to a VARA configuration file. If present, a backup of the existing VARA.ini or VARAFM.ini file is created and then the specified configuration file is applied. Once the session concludes, the original .ini file is restored. This feature ensures the preservation of original settings while enabling different configurations for specific setups such as a sound card name.
+* `Config` optional path to a VARA configuration file. If present, a backup of the existing VARA.ini or VARAFM.ini file is created and then the specified configuration file is applied. Once the session concludes, the original .ini file is restored. This feature ensures the preservation of original settings while enabling different configurations for specific setups such as a sound card name. Note that the configuration file must be in the same directory as the original VARA.ini or VARAFM.ini files.
 * `Port` command port defined in the VARA modem application. 
 * `CatCtrl` option cat control definition.
 * `Port` port used by cat control agent.
@@ -109,7 +109,7 @@ Configuration must be a valid `.json` file. You can define as many "modems" as y
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",
-        "Cmd": "C:\\Program Files\\hamlib-w64-4.5.5\bin\rigctld.exe",
+        "Cmd": "C:\\Program Files\\hamlib-w64-4.5.5\\bin\\rigctld.exe",
         "Args": "-m 3073 -r com7"
       }
     }
