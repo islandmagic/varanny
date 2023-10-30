@@ -107,25 +107,25 @@ To set up `varanny`:
 To configure `varanny`, edit the `varanny.json` file as per your needs. If you do not want the VARA executable to be managed by `varanny`, leave the cmd path field empty ("").
 
 ### Configuration Attributes
-Configuration must be a valid `.json` file. You can define as many "modems" as you'd like. This can be handy if you use the same computer to connect to multiple radios that require different configurations. If you need to run VARA with different parameters, you can simply clone your VARA directory and configure each copy as necessary.
+Configuration must be a valid `.json` file. You can define as many "modems" as you'd like. This can be handy if you use the same computer to connect to multiple radios that require different configurations. If you need to run VARA with different parameters, simply clone your VARA `.ini` configuration file and specify it as the `Config` attribute in `varanny.json`.
 
 * `Port` port that varanny agent binds to.
 * `Modems` arrray containing modem definitions.
-* `Name` name the modem will be advertised under. Must be unique.
+* `Name` name the modem will be advertised under. **Must be unique**.
 * `Type` type of VARA modem, `fm` or `hf`.
-* `Cmd` fully quality path to executable to start this VARA modem.
-* `Args` arguments to pass the executable.
-* `Config` optional path to a VARA configuration file. If present, a backup of the existing VARA.ini or VARAFM.ini file is created and then the specified configuration file is applied. Once the session concludes, the original .ini file is restored. This feature ensures the preservation of original settings while enabling different configurations for specific setups such as a sound card name. Note that the configuration file must be in the same directory as the original VARA.ini or VARAFM.ini files.
-* `Port` command port defined in the VARA modem application. 
-* `CatCtrl` option cat control definition.
-* `Port` port used by cat control agent.
-* `Dialect` protocol used by cat control agent. Currently only `hamlib` is supported.
-* `Cmd` fully quality path to executable to start the cat control agent.
-* `Args` arguments to pass the executable.
+* `Cmd` fully qualified path to the executable to start this VARA modem.
+* `Args` arguments to pass to the executable.
+* `Config` optional path to a VARA configuration file. If present, upon starting a session, a backup of the existing `VARA.ini` or `VARAFM.ini` file is created and then the specified configuration file is applied. Once the session concludes, the original `.ini` file is restored. This feature ensures the preservation of original settings while enabling different configurations for specific setups such as a sound card name. Note that the configuration file must be in the same directory as the original `VARA.ini` or `VARAFM.ini` files.
+* `Port` command port defined in the VARA modem application.
+* `CatCtrl` optional CAT control definition.
+* `Port` port used by the CAT control agent.
+* `Dialect` protocol used by the CAT control agent. Currently only `hamlib` is supported.
+* `Cmd` fully qualified path to the executable to start the CAT control agent.
+* `Args` arguments to pass to the executable.
 
 [Sample Configuration](https://github.com/islandmagic/varanny/blob/master/varanny.json)
 
-### Running with Wine on Linux
+### Running VARA with Wine on Linux
 Ensure VARA is installed in its default location and wine executable is in the PATH.
 
 ```
