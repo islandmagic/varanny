@@ -4,6 +4,42 @@
 
 `varanny` steps in to address these limitations, acting as a 'nanny' for VARA. It offers two primary capabilities:
 
+```
+┌────────────────────┐                ┌──────────────────────────┐                  ┌────────────────────┐   
+│ ┌────────────────┐ │                │      ┌──────────────┐    │                  │                    │   
+│ │                │ │                │      │              │    │                  │                    │   
+│ │                │ │                │      │ ctrl         │    │                  │                    │   
+│ │                ├─┼────port 4532───┼──────▶              │    │                  │       Radio        │   
+│ │                │ │                │      │   varanny    │    │                  │                    │   
+│ │                │ │        ┌───────┼──────┤              │    │                  │                    │   
+│ │                │ │        │       │      │              │    │                  │                    │   
+│ │                │ │        │       │      │    manage    │    │                  └──────┬─┬─┬─┬───────┘   
+│ │                │ │        │       │      └──┬─────────┬─┘    │                         │ │ │ │           
+│ │                │ │        │       │         │         │      │                         │ │ │ │ TX        
+│ │                │ │     DNS-SD     │         │         │      │                Headset  │ │ │ │ RX        
+│ │                │ │     Service    │         │         ▽      │                 Jack    │ │ │ │ PTT       
+│ │                │ │  Announcement  │         │  ┌ ─ ─ ─ ─ ─   │                         │ │ │ │ GND       
+│ │                │ │        │       │         │    VARA.ini │┐ │                         │ │ │ │           
+│ │   RadioMail    │ │        │       │         │  └ ─ ─ ─ ─ ─   │                         │ │ │ │           
+│ │                │ │        │       │         │    └ ─ ─ ─ ─ ┘ │                  ┌──────┴─┴─┴─┴───────┐   
+│ │                │ │        ▽       │         ▽                │                  │                    │   
+│ │                │ │                │      ┌─────────────┐     │                  │   ┌────────────┐   │   
+│ │                ◀─┼──CMD port 8300─┼──────▶             ├─────┼────Audio out─────┼───▶            │   │   
+│ │                │ │                │      │    VARA     │     │                  │   │ Soundcard  │   │   
+│ │                ◀─┼─DATA port 8301─┼──────▶             ◀─────┼─────Audio in─────┼───┤            │   │   
+│ │                │ │                │      └─────────────┘     │                  │   └────────────┘   │   
+│ │                │ │                │                          │                  │                    │   
+│ │                │ │                │      ┌─────────────┐     │                  │   ┌────────────┐   │   
+│ │                │ │                │      │             │     │                  │   │            │   │   
+│ │                ◀─┼───port 8273────┼──────▶   rigctld   │─────┼──────usb─────────┼───▶    PTT     │   │   
+│ │                │ │                │      │             │     │                  │   │            │   │   
+│ │                │ │                │      └─────────────┘     │                  │   └────────────┘   │   
+│ └────────────────┘ │                │                          │                  │                    │   
+│                    │      WiFi      │                          │       USB        │                    │   
+│    iPhone (iOS)    │                │    Headless Computer     │                  │ Sound Card Adapter │   
+└────────────────────┘                └──────────────────────────┘                  └────────────────────┘   
+```
+
 ## Service Announcement
 `varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and command port configured for that instance. In VARA modems, the data port number is always one more than the command port number.
 
