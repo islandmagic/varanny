@@ -28,7 +28,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.4"
+var version = "0.1.5"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -238,10 +238,10 @@ func handleConnection(conn net.Conn, p *program) {
 		}
 		if configPath != "" {
 			if modemConfigPath != "" {
-				log.Println("Uninstalling modem config file ", modemConfigPath)
+				log.Println("Uninstalling modem config file", modemConfigPath)
 				os.Rename(configPath, modemConfigPath)
 			}
-			log.Println("Restoring original config file ", configPath)
+			log.Println("Restoring original config file", configPath)
 			os.Rename(configPath+".varanny.bak", configPath)
 		}
 		conn.Close()
@@ -265,7 +265,7 @@ func handleConnection(conn net.Conn, p *program) {
 					found = true
 					var err error
 					if modem.Cmd != "" {
-						modemCmd = createCommand(modem.Cmd, strings.Split(modem.Args, " ")...)
+						modemCmd = createCommand(modem.Cmd, modem.Args)
 						if modemCmd != nil {
 							// Swap the config file to the one defined in the modem
 							if modem.Config != "" {
@@ -278,20 +278,20 @@ func handleConnection(conn net.Conn, p *program) {
 								}
 								modemConfigPath = modem.Config
 								// Make backup
-								log.Println("Backing up current config file ", configPath)
+								log.Println("Backing up current config file", configPath)
 								err := os.Rename(configPath, configPath+".varanny.bak")
 								if err != nil {
 									log.Println(err)
 								} else {
 									// Swap config file
-									log.Println("Installing modem config file ", modemConfigPath)
+									log.Println("Installing modem config file", modemConfigPath)
 									err := os.Rename(modemConfigPath, configPath)
 									if err != nil {
 										log.Println(err)
 									}
 								}
 							}
-							log.Println("Starting modem for ", modemName)
+							log.Println("Starting modem for", modemName)
 							log.Println("Command:", modemCmd.Path, modemCmd.Args)
 							err = modemCmd.Start()
 						}
@@ -300,7 +300,7 @@ func handleConnection(conn net.Conn, p *program) {
 					if err == nil && modem.CatCtrl.Cmd != "" {
 						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
 						if catCtrlCmd != nil {
-							log.Println("Starting cat control for ", modemName)
+							log.Println("Starting cat control for", modemName)
 							log.Println("Command:", catCtrlCmd.Path, catCtrlCmd.Args)
 							err = catCtrlCmd.Start()
 						}
