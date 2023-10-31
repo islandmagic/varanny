@@ -28,7 +28,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.3"
+var version = "0.1.4"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -229,15 +229,19 @@ func handleConnection(conn net.Conn, p *program) {
 
 	defer func() {
 		if modemCmd != nil && modemCmd.Process != nil {
+			log.Println("Killing modem process")
 			modemCmd.Process.Kill()
 		}
 		if catCtrlCmd != nil && catCtrlCmd.Process != nil {
+			log.Println("Killing cat control process")
 			catCtrlCmd.Process.Kill()
 		}
 		if configPath != "" {
 			if modemConfigPath != "" {
+				log.Println("Uninstalling modem config file ", modemConfigPath)
 				os.Rename(configPath, modemConfigPath)
 			}
+			log.Println("Restoring original config file ", configPath)
 			os.Rename(configPath+".varanny.bak", configPath)
 		}
 		conn.Close()
@@ -274,17 +278,21 @@ func handleConnection(conn net.Conn, p *program) {
 								}
 								modemConfigPath = modem.Config
 								// Make backup
+								log.Println("Backing up current config file ", configPath)
 								err := os.Rename(configPath, configPath+".varanny.bak")
 								if err != nil {
 									log.Println(err)
 								} else {
 									// Swap config file
+									log.Println("Installing modem config file ", modemConfigPath)
 									err := os.Rename(modemConfigPath, configPath)
 									if err != nil {
 										log.Println(err)
 									}
 								}
 							}
+							log.Println("Starting modem for ", modemName)
+							log.Println("Command:", modemCmd.Path, modemCmd.Args)
 							err = modemCmd.Start()
 						}
 					}
@@ -292,6 +300,8 @@ func handleConnection(conn net.Conn, p *program) {
 					if err == nil && modem.CatCtrl.Cmd != "" {
 						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
 						if catCtrlCmd != nil {
+							log.Println("Starting cat control for ", modemName)
+							log.Println("Command:", catCtrlCmd.Path, catCtrlCmd.Args)
 							err = catCtrlCmd.Start()
 						}
 					}
