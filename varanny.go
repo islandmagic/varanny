@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -23,12 +24,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/grandcat/zeroconf"
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.6"
+var version = "0.1.7"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -213,8 +215,12 @@ func createCommand(path string, args ...string) *exec.Cmd {
 		return nil
 	}
 	cmd := exec.Command(fullPath, args...)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+
+	logWriter := log.Writer()
+
+	multiWriter := io.MultiWriter(logWriter)
+	cmd.Stdout = multiWriter
+	cmd.Stderr = multiWriter
 	cmd.Dir = filepath.Dir(fullPath)
 	cmd.Env = os.Environ()
 	return cmd
@@ -231,24 +237,20 @@ func handleConnection(conn net.Conn, p *program) {
 		if modemCmd != nil && modemCmd.Process != nil {
 			log.Println("Shutdown modem process")
 			// Gracefully shutdown process on linux and kill on windows
-			err := modemCmd.Process.Signal(os.Interrupt)
+			err := modemCmd.Process.Signal(syscall.SIGTERM)
 			if err != nil {
 				modemCmd.Process.Kill()
-				modemCmd.Process.Release()
-			} else {
-				modemCmd.Wait()
 			}
+			modemCmd.Process.Release()
 		}
 		if catCtrlCmd != nil && catCtrlCmd.Process != nil {
 			log.Println("Shutdown cat control process")
 			// Gracefully shutdown process on linux and kill on windows
-			err := catCtrlCmd.Process.Signal(os.Interrupt)
+			err := catCtrlCmd.Process.Signal(syscall.SIGTERM)
 			if err != nil {
 				catCtrlCmd.Process.Kill()
-				catCtrlCmd.Process.Release()
-			} else {
-				catCtrlCmd.Wait()
 			}
+			catCtrlCmd.Process.Release()
 		}
 		if configPath != "" {
 			if modemConfigPath != "" {

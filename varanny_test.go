@@ -29,12 +29,4 @@ func TestCreateCommand(t *testing.T) {
 			t.Errorf("Expected argument at index %d to be %s, but got %s", i+1, arg, cmd.Args[i+1])
 		}
 	}
-
-	if cmd.Stdout != nil {
-		t.Error("Expected command stdout to be nil")
-	}
-
-	if cmd.Stderr != nil {
-		t.Error("Expected command stderr to be nil")
-	}
 }
