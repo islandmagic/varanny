@@ -30,7 +30,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.7"
+var version = "0.1.8"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -314,7 +314,9 @@ func handleConnection(conn net.Conn, p *program) {
 					}
 
 					if err == nil && modem.CatCtrl.Cmd != "" {
-						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
+						//						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
+						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, modem.CatCtrl.Args)
+
 						if catCtrlCmd != nil {
 							log.Println("Starting cat control for", modemName)
 							log.Println("Command:", catCtrlCmd.Path, catCtrlCmd.Args)
