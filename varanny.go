@@ -28,7 +28,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.5"
+var version = "0.1.6"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -229,12 +229,26 @@ func handleConnection(conn net.Conn, p *program) {
 
 	defer func() {
 		if modemCmd != nil && modemCmd.Process != nil {
-			log.Println("Killing modem process")
-			modemCmd.Process.Kill()
+			log.Println("Shutdown modem process")
+			// Gracefully shutdown process on linux and kill on windows
+			err := modemCmd.Process.Signal(os.Interrupt)
+			if err != nil {
+				modemCmd.Process.Kill()
+				modemCmd.Process.Release()
+			} else {
+				modemCmd.Wait()
+			}
 		}
 		if catCtrlCmd != nil && catCtrlCmd.Process != nil {
-			log.Println("Killing cat control process")
-			catCtrlCmd.Process.Kill()
+			log.Println("Shutdown cat control process")
+			// Gracefully shutdown process on linux and kill on windows
+			err := catCtrlCmd.Process.Signal(os.Interrupt)
+			if err != nil {
+				catCtrlCmd.Process.Kill()
+				catCtrlCmd.Process.Release()
+			} else {
+				catCtrlCmd.Wait()
+			}
 		}
 		if configPath != "" {
 			if modemConfigPath != "" {
