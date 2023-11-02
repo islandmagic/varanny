@@ -126,32 +126,51 @@ Configuration must be a valid `.json` file. You can define as many "modems" as y
 [Sample Configuration](https://github.com/islandmagic/varanny/blob/master/varanny.json)
 
 ### Running VARA with Wine on Linux
-Ensure VARA is installed in its default location and wine executable is in the PATH.
+Ensure VARA is installed in its default location and wine executable is in the PATH. Here is an sample configuration that defines two profiles for FM connections and one for HF.
 
 ```
 {
   "Port": 8273,
   "Modems": [
     {
-      "Name": "VARA FM Modem",
+      "Name": "IC705FM",
       "Type": "fm",
       "Cmd": "wine",
       "Args": "C:\\VARA FM\\VARAFM.exe",
+      "Config": "/home/georges/.wine/drive_c/VARA FM\VARAFM.ic705.ini",
       "Port": 8300,
       "CatCtrl": {
         "Port": 4532,
-        "Dialect": "hamlib"
+        "Dialect": "hamlib",
+        "Cmd": "rigctld",
+        "Args": "-m 3073 -c 148 -r /dev/ic-705a -s 19200"
       }    
     },
     {
-      "Name": "VARA HF Modem",
+      "Name": "THD74",
+      "Type": "fm",
+      "Cmd": "wine",
+      "Args": "C:\\VARA FM\\VARAFM.exe",
+      "Config": "/home/georges/.wine/drive_c/VARA FM\VARAFM.thd74.ini",
+      "Port": 8300,
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib",
+        "Cmd": "rigctld",
+        "Args": "-p /dev/ttyUSB0 -P RTS"
+      }    
+    },
+    {
+      "Name": "IC705HF",
       "Type": "hf",
       "Cmd": "wine",
       "Args": "C:\\VARA\\VARA.exe",
       "Port": 8400,
       "CatCtrl": {
         "Port": 4532,
-        "Dialect": "hamlib"
+        "Dialect": "hamlib",
+        "Cmd": "rigctld",
+        "Args": "-m 3073 -c 148 -r /dev/ic-705a -s 19200"
       }    
     }
   ]

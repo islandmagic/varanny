@@ -30,7 +30,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.8"
+var version = "0.1.9"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -239,19 +239,12 @@ func handleConnection(conn net.Conn, p *program) {
 			// Gracefully shutdown process on linux and kill on windows
 			err := modemCmd.Process.Signal(syscall.SIGTERM)
 			if err != nil {
+				log.Println("Shutdown modem process failed, killing")
 				modemCmd.Process.Kill()
 			}
 			modemCmd.Process.Release()
 		}
-		if catCtrlCmd != nil && catCtrlCmd.Process != nil {
-			log.Println("Shutdown cat control process")
-			// Gracefully shutdown process on linux and kill on windows
-			err := catCtrlCmd.Process.Signal(syscall.SIGTERM)
-			if err != nil {
-				catCtrlCmd.Process.Kill()
-			}
-			catCtrlCmd.Process.Release()
-		}
+
 		if configPath != "" {
 			if modemConfigPath != "" {
 				log.Println("Uninstalling modem config file", modemConfigPath)
@@ -260,6 +253,18 @@ func handleConnection(conn net.Conn, p *program) {
 			log.Println("Restoring original config file", configPath)
 			os.Rename(configPath+".varanny.bak", configPath)
 		}
+
+		if catCtrlCmd != nil && catCtrlCmd.Process != nil {
+			log.Println("Shutdown cat control process")
+			// Gracefully shutdown process on linux and kill on windows
+			err := catCtrlCmd.Process.Signal(syscall.SIGTERM)
+			if err != nil {
+				log.Println("Shutdown cat control process failed, killing")
+				catCtrlCmd.Process.Kill()
+			}
+			catCtrlCmd.Process.Release()
+		}
+
 		conn.Close()
 	}()
 
@@ -280,9 +285,23 @@ func handleConnection(conn net.Conn, p *program) {
 				if modem.Name == modemName {
 					found = true
 					var err error
-					if modem.Cmd != "" {
+
+					// Star cat control if defined first. No need to start VARA if cat control fails
+					if modem.CatCtrl.Cmd != "" {
+						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
+
+						if catCtrlCmd != nil {
+							log.Println("Starting cat control for", modemName)
+							log.Println("Command:", catCtrlCmd.Path, catCtrlCmd.Args)
+							err = catCtrlCmd.Start()
+						}
+					}
+
+					if err == nil && modem.Cmd != "" {
 						modemCmd = createCommand(modem.Cmd, modem.Args)
+
 						if modemCmd != nil {
+
 							// Swap the config file to the one defined in the modem
 							if modem.Config != "" {
 								// Rename existing config file
@@ -297,51 +316,44 @@ func handleConnection(conn net.Conn, p *program) {
 								log.Println("Backing up current config file", configPath)
 								err := os.Rename(configPath, configPath+".varanny.bak")
 								if err != nil {
+									configPath = "" // prevent restore
 									log.Println(err)
 								} else {
 									// Swap config file
 									log.Println("Installing modem config file", modemConfigPath)
 									err := os.Rename(modemConfigPath, configPath)
 									if err != nil {
+										modemConfigPath = "" // prevent restore
 										log.Println(err)
 									}
 								}
 							}
+
 							log.Println("Starting modem for", modemName)
 							log.Println("Command:", modemCmd.Path, modemCmd.Args)
 							err = modemCmd.Start()
 						}
 					}
 
-					if err == nil && modem.CatCtrl.Cmd != "" {
-						//						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
-						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, modem.CatCtrl.Args)
-
-						if catCtrlCmd != nil {
-							log.Println("Starting cat control for", modemName)
-							log.Println("Command:", catCtrlCmd.Path, catCtrlCmd.Args)
-							err = catCtrlCmd.Start()
-						}
-					}
-
 					if err != nil {
 						conn.Write([]byte("ERROR\n"))
-						conn.Close()
 						log.Println(err)
+						return
 					} else {
 						conn.Write([]byte("OK\n"))
 					}
 					break
 				}
 			}
+
 			if !found {
 				conn.Write([]byte("ERROR Modem name '" + modemName + "' not found\n"))
+				return
 			}
 		} else {
 			switch command {
 			case "stop":
 				conn.Write([]byte("OK\n"))
-				conn.Close()
 				return
 			case "version":
 				conn.Write([]byte(version + "\n"))
