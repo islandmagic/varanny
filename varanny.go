@@ -25,12 +25,13 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/grandcat/zeroconf"
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.9"
+var version = "0.1.10"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -340,6 +341,8 @@ func handleConnection(conn net.Conn, p *program) {
 						log.Println(err)
 						return
 					} else {
+						// Wait for modem to start
+						time.Sleep(3 * time.Second)
 						conn.Write([]byte("OK\n"))
 					}
 					break
