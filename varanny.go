@@ -31,7 +31,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.11"
+var version = "0.1.12"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -358,7 +358,29 @@ func handleConnection(conn net.Conn, p *program) {
 				conn.Write([]byte("OK\n"))
 				return
 			case "version":
+				conn.Write([]byte("OK\n"))
 				conn.Write([]byte(version + "\n"))
+			case "list":
+				conn.Write([]byte("OK\n"))
+				for _, modem := range p.Modems {
+					conn.Write([]byte(modem.Name + "\n"))
+				}
+			case "config":
+				conn.Write([]byte("OK\n"))
+				configPath, _ := getConfigPath()
+				conn.Write([]byte("Config path: " + configPath + "\n"))
+				for _, modem := range p.Modems {
+					conn.Write([]byte(modem.Name + "\n"))
+					conn.Write([]byte("  Type: " + modem.Type + "\n"))
+					conn.Write([]byte("  Cmd: " + modem.Cmd + "\n"))
+					conn.Write([]byte("  Args: " + modem.Args + "\n"))
+					conn.Write([]byte("  Config: " + modem.Config + "\n"))
+					conn.Write([]byte("  Port: " + strconv.Itoa(modem.Port) + "\n"))
+					conn.Write([]byte("  CatCtrl.Port: " + strconv.Itoa(modem.CatCtrl.Port) + "\n"))
+					conn.Write([]byte("  CatCtrl.Dialect: " + modem.CatCtrl.Dialect + "\n"))
+					conn.Write([]byte("  CatCtrl.Cmd: " + modem.CatCtrl.Cmd + "\n"))
+					conn.Write([]byte("  CatCtrl.Args: " + modem.CatCtrl.Args + "\n"))
+				}
 			default:
 				conn.Write([]byte("Invalid command\n"))
 			}
