@@ -2,26 +2,23 @@
   "Port": 8273,
   "Modems" : [
     {
-      "Name": "IC705 VARAFM",
+      "Name": "IC705FM",
       "Type": "fm",
       "Cmd": "C:\\VARA FM\\VARAFM.exe",
-      "Args": "",
       "Config": "C:\\VARA FM\\VARAFM.ic705.ini",
       "Port": 8300
     },
     {
-      "Name": "THD74 VARAFM",
+      "Name": "THD74",
       "Type": "fm",
       "Cmd": "C:\\VARA FM\\VARAFM.exe",
-      "Args": "",
       "Config": "C:\\VARA FM\\VARAFM.thd74.ini",
       "Port": 8300
     },    
     {
-      "Name": "IC705 VARAHF",
+      "Name": "IC705HF",
       "Type": "hf",
       "Cmd": "C:\\VARA\\VARA.exe",
-      "Args": "",
       "Port": 8400,
       "CatCtrl": {
         "Port": 4532,

@@ -136,8 +136,8 @@ Ensure VARA is installed in its default location and wine executable is in the P
       "Name": "IC705FM",
       "Type": "fm",
       "Cmd": "wine",
-      "Args": "C:\\VARA FM\\VARAFM.exe",
-      "Config": "/home/georges/.wine/drive_c/VARA FM\VARAFM.ic705.ini",
+      "Args": "/home/georges/.wine/drive_c/VARA FM/VARAFM.exe",
+      "Config": "/home/georges/.wine/drive_c/VARA FM/VARAFM.ic705.ini",
       "Port": 8300,
       "CatCtrl": {
         "Port": 4532,
@@ -150,8 +150,8 @@ Ensure VARA is installed in its default location and wine executable is in the P
       "Name": "THD74",
       "Type": "fm",
       "Cmd": "wine",
-      "Args": "C:\\VARA FM\\VARAFM.exe",
-      "Config": "/home/georges/.wine/drive_c/VARA FM\VARAFM.thd74.ini",
+      "Args": "/home/georges/.wine/drive_c/VARA FM/VARAFM.exe",
+      "Config": "/home/georges/.wine/drive_c/VARA FM/VARAFM.thd74.ini",
       "Port": 8300,
       "CatCtrl": {
         "Port": 4532,
@@ -164,7 +164,7 @@ Ensure VARA is installed in its default location and wine executable is in the P
       "Name": "IC705HF",
       "Type": "hf",
       "Cmd": "wine",
-      "Args": "C:\\VARA\\VARA.exe",
+      "Args": "/home/georges/.wine/drive_c/VARA/VARA.exe",
       "Port": 8400,
       "CatCtrl": {
         "Port": 4532,

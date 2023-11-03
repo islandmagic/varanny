@@ -1,0 +1,46 @@
+{
+  "Port": 8273,
+  "Modems": [
+    {
+      "Name": "IC705FM",
+      "Type": "fm",
+      "Cmd": "wine",
+      "Args": "/home/georges/.wine/drive_c/VARA FM/VARAFM.exe",
+      "Config": "/home/georges/.wine/drive_c/VARA FM/VARAFM.ic705.ini",
+      "Port": 8300,
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib",
+        "Cmd": "rigctld",
+        "Args": "-m 3073 -c 148 -r /dev/ic-705a -s 19200"
+      }    
+    },
+    {
+      "Name": "THD74",
+      "Type": "fm",
+      "Cmd": "wine",
+      "Args": "/home/georges/.wine/drive_c/VARA FM/VARAFM.exe",
+      "Config": "/home/georges/.wine/drive_c/VARA FM/VARAFM.thd74.ini",
+      "Port": 8300,
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib",
+        "Cmd": "rigctld",
+        "Args": "-p /dev/ttyUSB0 -P RTS"
+      }    
+    },
+    {
+      "Name": "IC705HF",
+      "Type": "hf",
+      "Cmd": "wine",
+      "Args": "/home/georges/.wine/drive_c/VARA/VARA.exe",
+      "Port": 8400,
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib",
+        "Cmd": "rigctld",
+        "Args": "-m 3073 -c 148 -r /dev/ic-705a -s 19200"
+      }    
+    }
+  ]
+}

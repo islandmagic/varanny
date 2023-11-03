@@ -31,7 +31,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.10"
+var version = "0.1.11"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -209,7 +209,7 @@ func getConfig(path string) (*Config, error) {
 }
 
 // Create a command with the given path and arguments
-func createCommand(path string, args ...string) *exec.Cmd {
+func createCommand(multiWriter io.Writer, path string, args ...string) *exec.Cmd {
 	fullPath, err := exec.LookPath(path)
 	if err != nil {
 		log.Println(err)
@@ -217,9 +217,6 @@ func createCommand(path string, args ...string) *exec.Cmd {
 	}
 	cmd := exec.Command(fullPath, args...)
 
-	logWriter := log.Writer()
-
-	multiWriter := io.MultiWriter(logWriter)
 	cmd.Stdout = multiWriter
 	cmd.Stderr = multiWriter
 	cmd.Dir = filepath.Dir(fullPath)
@@ -289,7 +286,9 @@ func handleConnection(conn net.Conn, p *program) {
 
 					// Star cat control if defined first. No need to start VARA if cat control fails
 					if modem.CatCtrl.Cmd != "" {
-						catCtrlCmd = createCommand(modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
+						logWriter := log.Writer()
+						multiWriter := io.MultiWriter(logWriter)
+						catCtrlCmd = createCommand(multiWriter, modem.CatCtrl.Cmd, strings.Split(modem.CatCtrl.Args, " ")...)
 
 						if catCtrlCmd != nil {
 							log.Println("Starting cat control for", modemName)
@@ -299,7 +298,7 @@ func handleConnection(conn net.Conn, p *program) {
 					}
 
 					if err == nil && modem.Cmd != "" {
-						modemCmd = createCommand(modem.Cmd, modem.Args)
+						modemCmd = createCommand(nil, modem.Cmd, modem.Args)
 
 						if modemCmd != nil {
 
@@ -341,7 +340,7 @@ func handleConnection(conn net.Conn, p *program) {
 						log.Println(err)
 						return
 					} else {
-						// Wait for modem to start
+						// Wait for modem to start and bind to their ports
 						time.Sleep(3 * time.Second)
 						conn.Write([]byte("OK\n"))
 					}
