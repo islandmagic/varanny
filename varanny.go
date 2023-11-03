@@ -31,7 +31,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.12"
+var version = "0.1.13"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -298,7 +298,9 @@ func handleConnection(conn net.Conn, p *program) {
 					}
 
 					if err == nil && modem.Cmd != "" {
-						modemCmd = createCommand(nil, modem.Cmd, modem.Args)
+						logWriter := log.Writer()
+						multiWriter := io.MultiWriter(logWriter)
+						modemCmd = createCommand(multiWriter, modem.Cmd, modem.Args)
 
 						if modemCmd != nil {
 
