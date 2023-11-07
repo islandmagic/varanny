@@ -84,6 +84,8 @@ Connections to `varanny` are session-oriented. A client connects, requests to st
 
 * `start <modem name>` - Starts the modem and rig control defined for `<modem name>`
 * `stop` - Stops the processes and close the connection
+* `list` - List the available modem names
+* `config` - Echo the `varanny.json` config file content
 * `version` - Returns varanny version
 
 ### Multiple Configurations
@@ -144,7 +146,7 @@ Ensure VARA is installed in its default location and wine executable is in the P
         "Dialect": "hamlib",
         "Cmd": "rigctld",
         "Args": "-m 3073 -c 148 -r /dev/ic-705a -s 19200"
-      }    
+      }
     },
     {
       "Name": "THD74",
@@ -158,8 +160,8 @@ Ensure VARA is installed in its default location and wine executable is in the P
         "Dialect": "hamlib",
         "Cmd": "rigctld",
         "Args": "-p /dev/ttyUSB0 -P RTS"
-      }    
-    },
+      }
+    },    
     {
       "Name": "IC705HF",
       "Type": "hf",
@@ -171,8 +173,60 @@ Ensure VARA is installed in its default location and wine executable is in the P
         "Dialect": "hamlib",
         "Cmd": "rigctld",
         "Args": "-m 3073 -c 148 -r /dev/ic-705a -s 19200"
-      }    
+      }
     }
   ]
 }
 ```
+
+## Troubleshooting
+
+Easiest is to run an interactive session again `varanny`.
+
+1. Start `varanny` on the host
+2. On a different computer on the same network, verify that modems are being advertised:
+```
+$ dns-sd -B _varafm-modem._tcp
+Browsing for _varafm-modem._tcp
+DATE: ---Mon 06 Nov 2023---
+16:15:31.372  ...STARTING...
+Timestamp     A/R    Flags  if Domain               Service Type         Instance Name
+16:15:31.373  Add        3   7 local.               _varafm-modem._tcp.  THD74
+16:15:31.373  Add        3   7 local.               _varafm-modem._tcp.  IC705FM
+
+$ dns-sd -B _varahf-modem._tcp
+Browsing for _varahf-modem._tcp
+DATE: ---Mon 06 Nov 2023---
+16:14:35.356  ...STARTING...
+Timestamp     A/R    Flags  if Domain               Service Type         Instance Name
+16:14:35.574  Add        3   7 local.               _varahf-modem._tcp.  IC705HF
+```
+should list the various modems defined in the configuration file.
+3. Connect to `varanny` instance
+```
+$ telnet t4.local 8273
+Connected to t4.local.
+Escape character is '^]'.
+```
+replace `t4.local` with the host name advertised above.
+4. At the prompt you can try various command. Verify that modems are defined properly:
+```
+list
+OK
+IC705FM
+THD74
+IC705HF
+```
+5. Start modem
+```
+start IC705FM
+OK
+```
+Verify on your host computer that the VARA application is running and that the proper `.ini` configuration file has been applied if any.
+6. Stop modem
+```
+stop
+OK
+Connection closed by foreign host.
+```
+VARA application should be closed and `.ini` configuration restored.
