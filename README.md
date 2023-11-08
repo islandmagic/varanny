@@ -181,10 +181,11 @@ Ensure VARA is installed in its default location and wine executable is in the P
 
 ## Troubleshooting
 
-Easiest is to run an interactive session again `varanny`.
+To validate your configuration, the easiest is to run an interactive session against `varanny` from another computer on the same network.
 
-1. Start `varanny` on the host
-2. On a different computer on the same network, verify that modems are being advertised:
+1. Start `varanny` on the host.
+2. From a different computer, verify that modems are being advertised on the network. The following commands should list the various modems defined in you `.json` configuration file.
+
 ```
 $ dns-sd -B _varafm-modem._tcp
 Browsing for _varafm-modem._tcp
@@ -201,15 +202,27 @@ DATE: ---Mon 06 Nov 2023---
 Timestamp     A/R    Flags  if Domain               Service Type         Instance Name
 16:14:35.574  Add        3   7 local.               _varahf-modem._tcp.  IC705HF
 ```
-should list the various modems defined in the configuration file.
-3. Connect to `varanny` instance
+3. Lookup the host address for a particular modem.
+
 ```
-$ telnet t4.local 8273
-Connected to t4.local.
+$ dns-sd -L "IC705FM" _varafm-modem._tcp local
+Lookup IC705FM._varafm-modem._tcp.local
+DATE: ---Mon 06 Nov 2023---
+ 16:58:59.059  ...STARTING...
+ 16:58:59.059  IC705FM._varafm-modem._tcp.local. can be reached at t4windoz.local.:8300 (interface 7)
+ launchport=8273\;
+```
+
+4. Connect to `varanny` instance. Replace `t4windoz.local` with your host name returned in the above command.
+
+```
+$ telnet t4windoz.local 8273
+Connected to t4windoz.local.
 Escape character is '^]'.
 ```
-replace `t4.local` with the host name advertised above.
-4. At the prompt you can try various command. Verify that modems are defined properly:
+
+5. At the prompt you can try various commands. Verify that your modems are defined properly:
+
 ```
 list
 OK
@@ -217,16 +230,21 @@ IC705FM
 THD74
 IC705HF
 ```
-5. Start modem
+
+6. Start a modem and verify on your host computer that the corresponding VARA application is running and that the proper `.ini` configuration file has been applied if any was specified in your `.json` config file.
+
 ```
 start IC705FM
 OK
 ```
-Verify on your host computer that the VARA application is running and that the proper `.ini` configuration file has been applied if any.
-6. Stop modem
+
+7. Stop the modem. The VARA application should be closed and the original `.ini` configuration restored.
+
 ```
 stop
 OK
 Connection closed by foreign host.
 ```
-VARA application should be closed and `.ini` configuration restored.
+
+### Logs
+`varanny` logs output to the start system logs.

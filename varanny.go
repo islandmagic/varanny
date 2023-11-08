@@ -233,11 +233,11 @@ func handleConnection(conn net.Conn, p *program) {
 
 	defer func() {
 		if modemCmd != nil && modemCmd.Process != nil {
-			log.Println("Shutdown modem process")
+			log.Println("Shutdown modem process gracefully")
 			// Gracefully shutdown process on linux and kill on windows
 			err := modemCmd.Process.Signal(syscall.SIGTERM)
 			if err != nil {
-				log.Println("Shutdown modem process failed, killing")
+				log.Println("Shutdown modem process gracefully failed, killing")
 				modemCmd.Process.Kill()
 			}
 			modemCmd.Process.Release()
@@ -253,11 +253,11 @@ func handleConnection(conn net.Conn, p *program) {
 		}
 
 		if catCtrlCmd != nil && catCtrlCmd.Process != nil {
-			log.Println("Shutdown cat control process")
+			log.Println("Shutdown cat control process gracefully")
 			// Gracefully shutdown process on linux and kill on windows
 			err := catCtrlCmd.Process.Signal(syscall.SIGTERM)
 			if err != nil {
-				log.Println("Shutdown cat control process failed, killing")
+				log.Println("Shutdown cat control process gracefully failed, killing")
 				catCtrlCmd.Process.Kill()
 			}
 			catCtrlCmd.Process.Release()
