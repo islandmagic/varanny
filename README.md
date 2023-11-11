@@ -92,18 +92,26 @@ Connections to `varanny` are session-oriented. A client connects, requests to st
 VARA doesn't offer command line configuration options. Therefore, changes like sound card name, PTT com port, etc., need to be made through its GUI. `varnnay` can help manage multiple configurations for you. It automatically swaps the `.ini` configuration file that VARA reads, allowing for seamless configuration changes before each session and restoring the default settings afterward. To create a new configuration, follow these steps:  
 
 1. Open the VARA application. 
-2. Adjust the parameters to your preference. 
-3. Close the application. 
-4. Go to the VARA installation directory (`C:\VARA` or `C:\VARA FM` by default) and duplicate the `VARA.ini` or `VARAFM.ini` file. 
+1. Adjust the parameters to your preference. 
+1. Close the application. 
+1. Go to the VARA installation directory (`C:\VARA` or `C:\VARA FM` by default) and duplicate the `VARA.ini` or `VARAFM.ini` file. 
 
-It's a good idea to use a naming convention that reflects what the configuration file represents. For instance, you might name a configuration set up for a Digirig sound card `VARA.digirig.ini`. You can then specify the configuration to use in the `varanny` config file.
+It's a good idea to use a naming convention that reflects what the configuration file represents. For instance, you might name a configuration set up for a Digirig sound card `VARA.digirig.ini`. You can then specify the configuration to use in the `varanny` config file. Also make a backup copy of your `.ini` in case something goes wrong and you need to restore it manually.
 
 ## Installation
 To set up `varanny`:
 
 1. [Download](https://github.com/islandmagic/varanny/releases/latest) the zip file suitable for your platform.
-1. Extract the zip into a local directory.
+1. Extract the zip into a local directory. Note: Windows makes you jump thru all sorts of hoops to run an `.exe` you downloaded from the internet. You should be used to it by now.
 1. Launch the `varanny` executable. You could either place a shortcut in the startup folder or write a script to start it at boot time.
+
+Alternatively, you can build `varanny` from source.
+
+```
+git checkout git@github.com:islandmagic/varanny.git
+cd varanny
+go build
+```
 
 ## Configuration
 To configure `varanny`, edit the `varanny.json` file as per your needs. If you do not want the VARA executable to be managed by `varanny`, leave the cmd path field empty ("").
@@ -247,4 +255,4 @@ Connection closed by foreign host.
 ```
 
 ### Logs
-`varanny` logs output to the start system logs.
+`varanny` logs output to the standard system logs.

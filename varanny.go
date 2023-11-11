@@ -31,10 +31,11 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.13"
+var version = "0.1.14"
 
 type Config struct {
 	Port   int     `json:"Port"`
+	Delay  int     `json:"Delay,default=10"`
 	Modems []Modem `json:"Modems"`
 }
 type Modem struct {
@@ -464,6 +465,9 @@ func main() {
 		}
 		return
 	}
+
+	// Delay start of service to allow time for hotspot network to come up
+	time.Sleep(time.Duration(config.Delay) * time.Second)
 
 	err = s.Run()
 	if err != nil {
