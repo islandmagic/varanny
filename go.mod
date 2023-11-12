@@ -6,6 +6,7 @@ require github.com/grandcat/zeroconf v1.0.0
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
+	github.com/gen2brain/malgo v0.11.10 // indirect
 	github.com/gordonklaus/portaudio v0.0.0-20230709114228-aafa478834f5 // indirect
 	github.com/kardianos/service v1.2.2 // indirect
 	github.com/miekg/dns v1.1.27 // indirect
