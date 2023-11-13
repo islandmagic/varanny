@@ -209,6 +209,15 @@ func getConfig(path string) (*Config, error) {
 	return conf, nil
 }
 
+func findModem(modems []Modem, name string) *Modem {
+	for _, modem := range modems {
+		if modem.Name == name {
+			return &modem
+		}
+	}
+	return nil
+}
+
 // Create a command with the given path and arguments
 func createCommand(multiWriter io.Writer, path string, args ...string) *exec.Cmd {
 	fullPath, err := exec.LookPath(path)
@@ -226,13 +235,17 @@ func createCommand(multiWriter io.Writer, path string, args ...string) *exec.Cmd
 }
 
 func handleConnection(conn net.Conn, p *program) {
-	buffer := make([]byte, 1024)
 	var modemCmd *exec.Cmd
 	var catCtrlCmd *exec.Cmd
 	var configPath string
 	var modemConfigPath string
+	dbfsLevels := make(chan DbfsLevel, 32)
+	stop := make(chan bool)
+	cmdChannel := make(chan string)
 
 	defer func() {
+		log.Println("Closing connection")
+
 		if modemCmd != nil && modemCmd.Process != nil {
 			log.Println("Shutdown modem process gracefully")
 			// Gracefully shutdown process on linux and kill on windows
@@ -264,25 +277,41 @@ func handleConnection(conn net.Conn, p *program) {
 			catCtrlCmd.Process.Release()
 		}
 
+		stop <- true
 		conn.Close()
 	}()
 
-	for {
-		n, err := conn.Read(buffer)
-		if err != nil {
-			log.Println(err)
-			conn.Close()
-			return
+	// Start a separate goroutine to read from a TCP socket
+	go func() {
+		buffer := make([]byte, 1024)
+		for {
+			n, err := conn.Read(buffer)
+			if err != nil {
+				if err == io.EOF {
+					fmt.Println("Client closed the connection")
+				} else {
+					log.Println(err)
+				}
+				stop <- true
+				return
+			}
+			cmdChannel <- strings.TrimSpace(string(buffer[:n]))
 		}
+	}()
 
-		command := strings.TrimSpace(string(buffer[:n]))
-		if strings.Split(command, " ")[0] == "start" {
-			// modem name could have spaces in it
-			modemName := strings.TrimPrefix(command, "start ")
-			found := false
-			for _, modem := range p.Modems {
-				if modem.Name == modemName {
-					found = true
+	for {
+		select {
+		case dbfs := <-dbfsLevels:
+			str := fmt.Sprintf("%.1f\n", dbfs.Level)
+			conn.Write([]byte(str))
+		case command := <-cmdChannel:
+			log.Println("Received command:", command)
+			if strings.Split(command, " ")[0] == "start" {
+				// modem name could have spaces in it
+				modemName := strings.TrimPrefix(command, "start ")
+				modem := findModem(p.Modems, modemName)
+
+				if modem != nil {
 					var err error
 
 					// Star cat control if defined first. No need to start VARA if cat control fails
@@ -347,45 +376,75 @@ func handleConnection(conn net.Conn, p *program) {
 						time.Sleep(3 * time.Second)
 						conn.Write([]byte("OK\n"))
 					}
-					break
+				} else {
+					conn.Write([]byte("ERROR modem name '" + modemName + "' not found\n"))
+					return
 				}
-			}
+			} else {
+				if strings.Split(command, " ")[0] == "monitor" {
+					// modem name could have spaces in it
+					modemName := strings.TrimPrefix(command, "monitor ")
+					modem := findModem(p.Modems, modemName)
 
-			if !found {
-				conn.Write([]byte("ERROR Modem name '" + modemName + "' not found\n"))
-				return
-			}
-		} else {
-			switch command {
-			case "stop":
-				conn.Write([]byte("OK\n"))
-				return
-			case "version":
-				conn.Write([]byte("OK\n"))
-				conn.Write([]byte(version + "\n"))
-			case "list":
-				conn.Write([]byte("OK\n"))
-				for _, modem := range p.Modems {
-					conn.Write([]byte(modem.Name + "\n"))
+					if modem != nil {
+						// Figure out .ini file name for this modem
+						iniFilePath := modem.Config
+						if iniFilePath == "" {
+							// Use default .ini file name
+							iniFilePath = DefaultVaraConfigFile(modem.Cmd)
+						}
+						// Lookup audio device name
+						audioDeviceName, err := GetInputDeviceName(iniFilePath)
+						if err != nil {
+							conn.Write([]byte("ERROR audio device not found in " + iniFilePath + "\n"))
+							return
+						}
+						log.Println("Monitoring audio device", audioDeviceName)
+						// start audio monitor
+						device, err := FindAudioDevice(audioDeviceName)
+						if err != nil {
+							conn.Write([]byte("ERROR audio device '" + audioDeviceName + "' not found\n"))
+							return
+						}
+						conn.Write([]byte("OK\n"))
+						go Monitor(device, dbfsLevels, stop)
+					} else {
+						conn.Write([]byte("ERROR modem name '" + modemName + "' not found\n"))
+						return
+					}
+				} else {
+					switch command {
+					case "stop":
+						conn.Write([]byte("OK\n"))
+						return
+					case "version":
+						conn.Write([]byte("OK\n"))
+						conn.Write([]byte(version + "\n"))
+					case "list":
+						conn.Write([]byte("OK\n"))
+						for _, modem := range p.Modems {
+							conn.Write([]byte(modem.Name + "\n"))
+						}
+					case "config":
+						conn.Write([]byte("OK\n"))
+						configPath, _ := getConfigPath()
+						conn.Write([]byte("Config path: " + configPath + "\n"))
+						for _, modem := range p.Modems {
+							conn.Write([]byte(modem.Name + "\n"))
+							conn.Write([]byte("  Type: " + modem.Type + "\n"))
+							conn.Write([]byte("  Cmd: " + modem.Cmd + "\n"))
+							conn.Write([]byte("  Args: " + modem.Args + "\n"))
+							conn.Write([]byte("  Config: " + modem.Config + "\n"))
+							conn.Write([]byte("  Port: " + strconv.Itoa(modem.Port) + "\n"))
+							conn.Write([]byte("  CatCtrl.Port: " + strconv.Itoa(modem.CatCtrl.Port) + "\n"))
+							conn.Write([]byte("  CatCtrl.Dialect: " + modem.CatCtrl.Dialect + "\n"))
+							conn.Write([]byte("  CatCtrl.Cmd: " + modem.CatCtrl.Cmd + "\n"))
+							conn.Write([]byte("  CatCtrl.Args: " + modem.CatCtrl.Args + "\n"))
+						}
+					default:
+						conn.Write([]byte("Invalid command\n"))
+					}
 				}
-			case "config":
-				conn.Write([]byte("OK\n"))
-				configPath, _ := getConfigPath()
-				conn.Write([]byte("Config path: " + configPath + "\n"))
-				for _, modem := range p.Modems {
-					conn.Write([]byte(modem.Name + "\n"))
-					conn.Write([]byte("  Type: " + modem.Type + "\n"))
-					conn.Write([]byte("  Cmd: " + modem.Cmd + "\n"))
-					conn.Write([]byte("  Args: " + modem.Args + "\n"))
-					conn.Write([]byte("  Config: " + modem.Config + "\n"))
-					conn.Write([]byte("  Port: " + strconv.Itoa(modem.Port) + "\n"))
-					conn.Write([]byte("  CatCtrl.Port: " + strconv.Itoa(modem.CatCtrl.Port) + "\n"))
-					conn.Write([]byte("  CatCtrl.Dialect: " + modem.CatCtrl.Dialect + "\n"))
-					conn.Write([]byte("  CatCtrl.Cmd: " + modem.CatCtrl.Cmd + "\n"))
-					conn.Write([]byte("  CatCtrl.Args: " + modem.CatCtrl.Args + "\n"))
-				}
-			default:
-				conn.Write([]byte("Invalid command\n"))
 			}
 		}
 	}

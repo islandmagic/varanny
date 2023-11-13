@@ -1,103 +1,147 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math"
-	"os"
+	"time"
+	"unsafe"
 
-	"text/template"
-
-	"github.com/gordonklaus/portaudio"
-	"github.com/mjibson/go-dsp/fft"
+	"github.com/gen2brain/malgo"
 )
 
-func dump() {
-	in := make([]float32, 64)
-	stream, err := portaudio.OpenDefaultStream(1, 0, 44100, len(in), in)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not open default stream:", err)
-		os.Exit(1)
+type DbfsLevel struct {
+	Level float64
+}
+
+// Compute RMS of a buffer
+func computeRMS(in []int16) float64 {
+	var sum float64
+	sum = 0.0
+	for _, v := range in {
+		sum += float64(v) * float64(v)
+	}
+	if sum == 0 {
+		return 0
+	}
+	return math.Sqrt(sum / float64(len(in)))
+}
+
+// Compute dBFS level of a buffer
+func computedBFS(in []int16) float64 {
+	rms := computeRMS(in)
+	if rms == 0 {
+		// clip to lowest value
+		return -96.0
+	}
+	dbfs := 20 * math.Log10(rms/float64(1<<15))
+	return dbfs
+}
+
+func systemByteOrder() binary.ByteOrder {
+	var i int32 = 0x01020304
+	u := unsafe.Pointer(&i)
+	pb := (*byte)(u)
+	b := *pb
+
+	if b == 0x04 {
+		return binary.LittleEndian
+	}
+	return binary.BigEndian
+}
+
+func alignTo16BitBuffer(b []byte) ([]int16, error) {
+	buf := bytes.NewBuffer(b)
+	var data []int16
+
+	for buf.Len() > 0 {
+		var value int16
+		err := binary.Read(buf, systemByteOrder(), &value)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, value)
 	}
 
-	defer stream.Close()
+	return data, nil
+}
 
-	err = stream.Start()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not start stream:", err)
-		os.Exit(1)
+/*
+Listen to a device and call back a lambda function with the dBFS level
+When lambda returns false, the listening stops
+*/
+func Monitor(deviceInfo malgo.DeviceInfo, dbfsLevels chan DbfsLevel, stop chan bool) {
+	ctx, err := malgo.InitContext(nil, malgo.ContextConfig{}, func(message string) {
+		fmt.Printf(message)
+	})
+	chk(err)
+	defer func() {
+		_ = ctx.Uninit()
+		ctx.Free()
+	}()
+
+	// Commonly supported audio format
+	deviceConfig := malgo.DefaultDeviceConfig(malgo.Capture)
+	deviceConfig.Capture.Format = malgo.FormatS16
+	deviceConfig.Capture.Channels = 1
+	//	deviceConfig.PeriodSizeInFrames = 128
+	deviceConfig.SampleRate = 44100
+	deviceConfig.Alsa.NoMMap = 1
+	deviceConfig.Capture.DeviceID = deviceInfo.ID.Pointer()
+
+	//sizeInBytes := uint32(malgo.SampleSizeInBytes(deviceConfig.Capture.Format))
+	onRecvFrames := func(pSample2, pSample []byte, framecount uint32) {
+		// realign the buffer from bytes to int16
+		buffer, _ := alignTo16BitBuffer(pSample)
+		dbfs := -96.0
+		if len(buffer) > 0 {
+			dbfs = computedBFS(buffer)
+		}
+		dbfsLevels <- DbfsLevel{dbfs}
 	}
+
+	captureCallbacks := malgo.DeviceCallbacks{
+		Data: onRecvFrames,
+	}
+	device, err := malgo.InitDevice(ctx.Context, deviceConfig, captureCallbacks)
+	chk(err)
+
+	err = device.Start()
+	chk(err)
 
 	for {
-		err = stream.Read()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Could not read from stream:", err)
-			os.Exit(1)
+		select {
+		case <-stop:
+			fmt.Println("Stopping monitoring...")
+			device.Uninit()
+			return
+		default:
+			time.Sleep(1 * time.Second)
 		}
-
-		// Process audio to display db level
-
-		// Convert in to []float64
-		in64 := make([]float64, len(in))
-		for i := range in {
-			in64[i] = float64(in[i])
-		}
-
-		// FFT
-		fftData := fft.FFTReal(in64)
-
-		// Calculate power
-		power := make([]float64, len(fftData))
-		for i := range fftData {
-			re := real(fftData[i])
-			im := imag(fftData[i])
-			power[i] = re*re + im*im
-		}
-
-		// Calculate db
-		db := make([]float64, len(fftData))
-		for i := range fftData {
-			db[i] = 10 * math.Log10(power[i])
-		}
-
-		// Calculate average
-		avg := 0.0
-		for i := range db {
-			avg += db[i]
-		}
-		avg /= float64(len(db))
-
-		// Display db level
-		fmt.Printf("avg: %f\n", avg)
-
 	}
 }
 
-var tmpl = template.Must(template.New("").Parse(
-	`{{. | len}} host APIs: {{range .}}
-	Name:                   {{.Name}}
-	{{if .DefaultInputDevice}}Default input device:   {{.DefaultInputDevice.Name}}{{end}}
-	{{if .DefaultOutputDevice}}Default output device:  {{.DefaultOutputDevice.Name}}{{end}}
-	Devices: {{range .Devices}}
-		Name:                      {{.Name}}
-		MaxInputChannels:          {{.MaxInputChannels}}
-		MaxOutputChannels:         {{.MaxOutputChannels}}
-		DefaultLowInputLatency:    {{.DefaultLowInputLatency}}
-		DefaultLowOutputLatency:   {{.DefaultLowOutputLatency}}
-		DefaultHighInputLatency:   {{.DefaultHighInputLatency}}
-		DefaultHighOutputLatency:  {{.DefaultHighOutputLatency}}
-		DefaultSampleRate:         {{.DefaultSampleRate}}
-	{{end}}
-{{end}}`,
-))
+// Find device based on name
+func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
+	context, err := malgo.InitContext(nil, malgo.ContextConfig{}, func(message string) {
+		fmt.Printf(message)
+	})
+	chk(err)
+	defer func() {
+		_ = context.Uninit()
+		context.Free()
+	}()
 
-func main() {
-	portaudio.Initialize()
-	defer portaudio.Terminate()
-	hs, err := portaudio.HostApis()
+	infos, err := context.Devices(malgo.Capture)
 	chk(err)
-	err = tmpl.Execute(os.Stdout, hs)
-	chk(err)
-	dump()
+
+	for _, info := range infos {
+		if info.Name() == name {
+			return info, nil
+		}
+	}
+	return malgo.DeviceInfo{}, fmt.Errorf("device %s not found", name)
 }
 
 func chk(err error) {
