@@ -28,9 +28,9 @@ func DefaultVaraConfigFile(fullexecpath string) string {
 	dir, execname := filepath.Split(fullexecpath)
 	switch execname {
 	case "VARA.exe":
-		return dir + "/VARA.ini"
+		return filepath.Join(dir, "VARA.ini")
 	case "VARAFM.exe":
-		return dir + "/VARAFM.ini"
+		return filepath.Join(dir, "VARAFM.ini")
 	default:
 		return ""
 	}

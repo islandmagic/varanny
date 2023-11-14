@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -31,7 +32,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-var version = "0.1.14"
+var version = "0.1.15"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -46,6 +47,7 @@ type Modem struct {
 	Config  string  `json:"Config"`
 	Port    int     `json:"Port"`
 	CatCtrl CatCtrl `json:"CatCtrl,omitempty"`
+	mu      sync.Mutex
 }
 type CatCtrl struct {
 	Port    int    `json:"Port"`
@@ -164,6 +166,7 @@ func (p *program) run() {
 			log.Fatal(err)
 		}
 		go func() {
+			log.Println("New connection")
 			handleConnection(conn, p)
 		}()
 	}
@@ -209,10 +212,10 @@ func getConfig(path string) (*Config, error) {
 	return conf, nil
 }
 
-func findModem(modems []Modem, name string) *Modem {
+func findModem(modems []*Modem, name string) *Modem {
 	for _, modem := range modems {
 		if modem.Name == name {
-			return &modem
+			return modem
 		}
 	}
 	return nil
@@ -288,7 +291,7 @@ func handleConnection(conn net.Conn, p *program) {
 			n, err := conn.Read(buffer)
 			if err != nil {
 				if err == io.EOF {
-					fmt.Println("Client closed the connection")
+					log.Println("Client closed the connection")
 				} else {
 					log.Println(err)
 				}
@@ -309,12 +312,23 @@ func handleConnection(conn net.Conn, p *program) {
 			if strings.Split(command, " ")[0] == "start" {
 				// modem name could have spaces in it
 				modemName := strings.TrimPrefix(command, "start ")
-				modem := findModem(p.Modems, modemName)
+				modems := make([]*Modem, len(p.Modems))
+				for i := range p.Modems {
+					modems[i] = &p.Modems[i]
+				}
+				modem := findModem(modems, modemName)
 
 				if modem != nil {
+					if modem.mu.TryLock() == false {
+						conn.Write([]byte("ERROR modem " + modemName + " is already running\n"))
+						log.Println("ERROR modem " + modemName + " is already running")
+						return
+					}
+					defer modem.mu.Unlock()
+
 					var err error
 
-					// Star cat control if defined first. No need to start VARA if cat control fails
+					// Start cat control if defined first. No need to start VARA if cat control fails
 					if modem.CatCtrl.Cmd != "" {
 						logWriter := log.Writer()
 						multiWriter := io.MultiWriter(logWriter)
@@ -351,12 +365,17 @@ func handleConnection(conn net.Conn, p *program) {
 									configPath = "" // prevent restore
 									log.Println(err)
 								} else {
-									// Swap config file
-									log.Println("Installing modem config file", modemConfigPath)
-									err := os.Rename(modemConfigPath, configPath)
-									if err != nil {
+									// Swap config file if necessary
+									if modemConfigPath != configPath {
+										log.Println("Installing modem config file", modemConfigPath)
+										err := os.Rename(modemConfigPath, configPath)
+										if err != nil {
+											modemConfigPath = "" // prevent restore
+											log.Println(err)
+										}
+									} else {
+										log.Println("Modem config file already installed")
 										modemConfigPath = "" // prevent restore
-										log.Println(err)
 									}
 								}
 							}
@@ -384,9 +403,20 @@ func handleConnection(conn net.Conn, p *program) {
 				if strings.Split(command, " ")[0] == "monitor" {
 					// modem name could have spaces in it
 					modemName := strings.TrimPrefix(command, "monitor ")
-					modem := findModem(p.Modems, modemName)
+					modems := make([]*Modem, len(p.Modems))
+					for i := range p.Modems {
+						modems[i] = &p.Modems[i]
+					}
+					modem := findModem(modems, modemName)
 
 					if modem != nil {
+						if modem.mu.TryLock() == false {
+							conn.Write([]byte("ERROR modem " + modemName + " is already running\n"))
+							log.Println("ERROR modem " + modemName + " is already running")
+							return
+						}
+						defer modem.mu.Unlock()
+
 						// Figure out .ini file name for this modem
 						iniFilePath := modem.Config
 						if iniFilePath == "" {
@@ -399,7 +429,7 @@ func handleConnection(conn net.Conn, p *program) {
 							conn.Write([]byte("ERROR audio device not found in " + iniFilePath + "\n"))
 							return
 						}
-						log.Println("Monitoring audio device", audioDeviceName)
+						log.Println("Monitoring audio device '" + audioDeviceName + "'")
 						// start audio monitor
 						device, err := FindAudioDevice(audioDeviceName)
 						if err != nil {
@@ -407,6 +437,7 @@ func handleConnection(conn net.Conn, p *program) {
 							return
 						}
 						conn.Write([]byte("OK\n"))
+						conn.Write([]byte(device.Name() + "\n"))
 						go Monitor(device, dbfsLevels, stop)
 					} else {
 						conn.Write([]byte("ERROR modem name '" + modemName + "' not found\n"))

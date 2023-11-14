@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -85,7 +86,7 @@ func Monitor(deviceInfo malgo.DeviceInfo, dbfsLevels chan DbfsLevel, stop chan b
 	deviceConfig := malgo.DefaultDeviceConfig(malgo.Capture)
 	deviceConfig.Capture.Format = malgo.FormatS16
 	deviceConfig.Capture.Channels = 1
-	//	deviceConfig.PeriodSizeInFrames = 128
+	deviceConfig.PeriodSizeInMilliseconds = 100 // Slow samlping rate
 	deviceConfig.SampleRate = 44100
 	deviceConfig.Alsa.NoMMap = 1
 	deviceConfig.Capture.DeviceID = deviceInfo.ID.Pointer()
@@ -137,7 +138,9 @@ func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
 	chk(err)
 
 	for _, info := range infos {
-		if info.Name() == name {
+		// Vara truncate the name to 32 characters
+		// match if the name is a prefix of the device name
+		if strings.HasPrefix(info.Name(), name) {
 			return info, nil
 		}
 	}
