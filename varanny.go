@@ -13,6 +13,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -29,10 +31,9 @@ import (
 	"time"
 
 	"github.com/grandcat/zeroconf"
-	"github.com/kardianos/service"
 )
 
-var version = "0.1.15"
+var version = "0.1.17"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -55,13 +56,8 @@ type CatCtrl struct {
 	Cmd     string `json:"Cmd"`
 	Args    string `json:"Args"`
 }
-
-var logger service.Logger
-
 type program struct {
-	exit    chan struct{}
-	service service.Service
-
+	ctx context.Context
 	*Config
 }
 
@@ -73,11 +69,10 @@ func assertExecutable(path string) error {
 	return nil
 }
 
-func (p *program) Start(s service.Service) error {
+func (p *program) validateConfig() {
 	// Iterate over modems and exit if no modem is defined
 	if len(p.Modems) == 0 {
-		logger.Info("No modems defined")
-		return nil
+		log.Fatal("No modems defined")
 	}
 
 	// Iterate over modems and validate that all cmd map to an existing file
@@ -85,19 +80,16 @@ func (p *program) Start(s service.Service) error {
 		if modem.Cmd != "" {
 			err := assertExecutable(modem.Cmd)
 			if err != nil {
-				return err
+				log.Fatal(err)
 			}
 		}
 		if modem.CatCtrl.Cmd != "" {
 			err := assertExecutable(modem.CatCtrl.Cmd)
 			if err != nil {
-				return err
+				log.Fatal(err)
 			}
 		}
 	}
-
-	go p.run()
-	return nil
 }
 
 func addOption(options []string, key string, value string) []string {
@@ -105,80 +97,6 @@ func addOption(options []string, key string, value string) []string {
 		options = append(options, key+"="+value+";")
 	}
 	return options
-}
-
-func (p *program) run() {
-	logger.Info("Starting launcher, listening on port ", p.Port)
-
-	defer func() {
-		if service.Interactive() {
-			p.Stop(p.service)
-		} else {
-			p.service.Stop()
-		}
-	}()
-
-	// Iterate over modem and announce them
-	for _, modem := range p.Modems {
-		if modem.Port != 0 {
-			options := []string{}
-
-			// Advertise the launcher port if the modem has a command
-			if modem.Cmd != "" || modem.CatCtrl.Cmd != "" {
-				options = addOption(options, "launchport", strconv.Itoa(p.Port))
-			}
-
-			if modem.CatCtrl.Port != 0 {
-				options = addOption(options, "catport", strconv.Itoa(modem.CatCtrl.Port))
-				options = addOption(options, "catdialect", modem.CatCtrl.Dialect)
-			}
-
-			// Advertise the modem based on its type
-			switch modem.Type {
-			case "fm":
-				fm_server, err := zeroconf.Register(modem.Name, "_varafm-modem._tcp", "local.", modem.Port, options, nil)
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer fm_server.Shutdown()
-			case "hf":
-				hf_server, err := zeroconf.Register(modem.Name, "_varahf-modem._tcp", "local.", modem.Port, options, nil)
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer hf_server.Shutdown()
-			default:
-				log.Fatal("Unknown modem type: ", modem.Type)
-			}
-		}
-	}
-
-	// Start the launcher server
-	portStr := strconv.Itoa(p.Port)
-	ln, err := net.Listen("tcp", ":"+portStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Fatal(err)
-		}
-		go func() {
-			log.Println("New connection")
-			handleConnection(conn, p)
-		}()
-	}
-}
-
-func (p *program) Stop(s service.Service) error {
-	close(p.exit)
-	logger.Info("Stopping launcher")
-	if service.Interactive() {
-		os.Exit(0)
-	}
-	return nil
 }
 
 func getConfigPath() (string, error) {
@@ -221,7 +139,6 @@ func findModem(modems []*Modem, name string) *Modem {
 	return nil
 }
 
-// Create a command with the given path and arguments
 func createCommand(multiWriter io.Writer, path string, args ...string) *exec.Cmd {
 	fullPath, err := exec.LookPath(path)
 	if err != nil {
@@ -241,13 +158,15 @@ func handleConnection(conn net.Conn, p *program) {
 	var modemCmd *exec.Cmd
 	var catCtrlCmd *exec.Cmd
 	var configPath string
-	var modemConfigPath string
+
 	dbfsLevels := make(chan DbfsLevel, 32)
 	stop := make(chan bool)
 	cmdChannel := make(chan string)
 
+	var modem *Modem
+
 	defer func() {
-		log.Println("Closing connection")
+		log.Println("Cleaning up after closing connection")
 
 		if modemCmd != nil && modemCmd.Process != nil {
 			log.Println("Shutdown modem process gracefully")
@@ -261,10 +180,6 @@ func handleConnection(conn net.Conn, p *program) {
 		}
 
 		if configPath != "" {
-			if modemConfigPath != "" {
-				log.Println("Uninstalling modem config file", modemConfigPath)
-				os.Rename(configPath, modemConfigPath)
-			}
 			log.Println("Restoring original config file", configPath)
 			os.Rename(configPath+".varanny.bak", configPath)
 		}
@@ -280,8 +195,17 @@ func handleConnection(conn net.Conn, p *program) {
 			catCtrlCmd.Process.Release()
 		}
 
+		if modem != nil {
+			// release mutex if still locked
+			modem.mu.TryLock()
+			modem.mu.Unlock()
+		}
+
 		stop <- true
 		conn.Close()
+		close(dbfsLevels)
+		close(cmdChannel)
+		close(stop)
 	}()
 
 	// Start a separate goroutine to read from a TCP socket
@@ -316,7 +240,7 @@ func handleConnection(conn net.Conn, p *program) {
 				for i := range p.Modems {
 					modems[i] = &p.Modems[i]
 				}
-				modem := findModem(modems, modemName)
+				modem = findModem(modems, modemName)
 
 				if modem != nil {
 					if modem.mu.TryLock() == false {
@@ -357,25 +281,26 @@ func handleConnection(conn net.Conn, p *program) {
 								} else {
 									configPath = filepath.Join(filepath.Dir(modem.Config), "VARA.ini")
 								}
-								modemConfigPath = modem.Config
-								// Make backup
-								log.Println("Backing up current config file", configPath)
-								err := os.Rename(configPath, configPath+".varanny.bak")
-								if err != nil {
-									configPath = "" // prevent restore
-									log.Println(err)
-								} else {
-									// Swap config file if necessary
-									if modemConfigPath != configPath {
-										log.Println("Installing modem config file", modemConfigPath)
-										err := os.Rename(modemConfigPath, configPath)
-										if err != nil {
-											modemConfigPath = "" // prevent restore
-											log.Println(err)
-										}
+								modemConfigPath := modem.Config
+
+								if modemConfigPath != configPath {
+									// Check if requested modem config exists
+									if FileExists(modemConfigPath) == false {
+										log.Println("Modem config file", modemConfigPath, "does not exist")
 									} else {
-										log.Println("Modem config file already installed")
-										modemConfigPath = "" // prevent restore
+										// Make backup
+										log.Println("Backing up current config file", configPath)
+										err := CopyFile(configPath, configPath+".varanny.bak")
+										if err != nil {
+											configPath = "" // prevent restore
+											log.Println(err)
+										} else {
+											log.Println("Installing modem config file", modemConfigPath)
+											err := CopyFile(modemConfigPath, configPath)
+											if err != nil {
+												log.Println(err)
+											}
+										}
 									}
 								}
 							}
@@ -392,7 +317,7 @@ func handleConnection(conn net.Conn, p *program) {
 						return
 					} else {
 						// Wait for modem to start and bind to their ports
-						time.Sleep(3 * time.Second)
+						//time.Sleep(3 * time.Second)
 						conn.Write([]byte("OK\n"))
 					}
 				} else {
@@ -407,7 +332,7 @@ func handleConnection(conn net.Conn, p *program) {
 					for i := range p.Modems {
 						modems[i] = &p.Modems[i]
 					}
-					modem := findModem(modems, modemName)
+					modem = findModem(modems, modemName)
 
 					if modem != nil {
 						if modem.mu.TryLock() == false {
@@ -477,12 +402,90 @@ func handleConnection(conn net.Conn, p *program) {
 					}
 				}
 			}
+		case <-stop:
+			return
+		case <-p.ctx.Done():
+			return
 		}
 	}
 }
 
+// Returns array of zeroconf servers
+func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
+	var name string
+
+	for _, modem := range modems {
+		if modem.Port != 0 {
+			options := []string{}
+
+			// Advertise the launcher port if the modem has a command
+			if modem.Cmd != "" || modem.CatCtrl.Cmd != "" {
+				options = addOption(options, "launchport", strconv.Itoa(port))
+			}
+
+			if modem.CatCtrl.Port != 0 {
+				options = addOption(options, "catport", strconv.Itoa(modem.CatCtrl.Port))
+				options = addOption(options, "catdialect", modem.CatCtrl.Dialect)
+			}
+
+			// Advertise the modem based on its type
+			switch modem.Type {
+			case "fm":
+				name = "_varafm-modem._tcp"
+			case "hf":
+				name = "_varahf-modem._tcp"
+			default:
+				log.Fatal("Unknown modem type: ", modem.Type)
+			}
+
+			server, err := zeroconf.Register(modem.Name, name, "local.", modem.Port, options, nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+			servers = append(servers, server)
+		}
+	}
+	return servers
+}
+
+func (p *program) run() {
+	log.Println("Starting launcher, listening on port ", p.Port)
+
+	servers := advertiseServices(p.Modems, p.Port)
+	defer func() {
+		for _, server := range servers {
+			server.Shutdown()
+		}
+	}()
+
+	// Start the launcher server
+	portStr := strconv.Itoa(p.Port)
+	ln, err := net.Listen("tcp", ":"+portStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				log.Fatal(err)
+			}
+			go func() {
+				log.Println("New connection")
+				handleConnection(conn, p)
+			}()
+		}
+	}()
+
+	select {
+	case <-p.ctx.Done():
+		ln.Close()
+		return
+	}
+}
+
 func main() {
-	svcFlag := flag.String("service", "", "Control the system service.")
 	configFlag := flag.String("config", "", "Path to the configuration file.")
 	versionFlag := flag.Bool("version", false, "Print version and exit.")
 
@@ -515,52 +518,25 @@ func main() {
 		log.Fatal(err)
 	}
 
-	svcConfig := &service.Config{
-		Name:        "varanny",
-		DisplayName: "VARA Modem Nanny",
-		Description: "This service can start and stop vara modem program remotely.",
-	}
-
+	ctx, cancel := context.WithCancel(context.Background())
 	prg := &program{
-		exit: make(chan struct{}),
-
+		ctx:    ctx,
 		Config: config,
 	}
-	s, err := service.New(prg, svcConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-	prg.service = s
 
-	errs := make(chan error, 5)
-	logger, err = s.Logger(errs)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go func() {
-		for {
-			err := <-errs
-			if err != nil {
-				log.Print(err)
-			}
-		}
-	}()
-
-	if len(*svcFlag) != 0 {
-		err := service.Control(s, *svcFlag)
-		if err != nil {
-			log.Printf("Valid actions: %q\n", service.ControlAction)
-			log.Fatal(err)
-		}
-		return
-	}
+	prg.validateConfig()
 
 	// Delay start of service to allow time for hotspot network to come up
 	time.Sleep(time.Duration(config.Delay) * time.Second)
 
-	err = s.Run()
-	if err != nil {
-		logger.Error(err)
-	}
+	// Intercept SIGINT and SIGTERM to allow for graceful shutdown
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		<-c
+		log.Println("Shutting down...")
+		cancel()
+	}()
+
+	prg.run()
 }

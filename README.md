@@ -82,9 +82,10 @@ The service accnouncment has been inspired by https://github.com/hessu/aprs-spec
 ### Supported commands
 Connections to `varanny` are session-oriented. A client connects, requests to start a modem, performs some operations, and then stops it. Once the modem is stopped, `varanny` will close the connection and restore the VARA configuration file if necessary.
 
+* `list` - List the available modem names
 * `start <modem name>` - Starts the modem and rig control defined for `<modem name>`
 * `stop` - Stops the processes and close the connection
-* `list` - List the available modem names
+* `monitor <modem name>` - Connects to the input audio interface defined for this modem. Returns the interface name, followed by continous stream of audio level in dbFS.
 * `config` - Echo the `varanny.json` config file content
 * `version` - Returns varanny version
 

@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/go-ini/ini"
@@ -34,4 +36,36 @@ func DefaultVaraConfigFile(fullexecpath string) string {
 	default:
 		return ""
 	}
+}
+
+// Check if the file exists
+func FileExists(filename string) bool {
+	if _, err := os.Stat(filename); err == nil {
+		return true
+	}
+	return false
+}
+
+// Copy the file from the source to the destination
+func CopyFile(source string, destination string) error {
+	// Open the source file
+	src, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	// Create the destination file
+	dst, err := os.Create(destination)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	// Copy the bytes from source to destination
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		return err
+	}
+	return err
 }

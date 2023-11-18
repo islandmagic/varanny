@@ -1,0 +1,4 @@
+[x] Copy .ini instead of rename
+[] Detect error condition on startup and clean up by restoring backup file
+[x] Shutdown gracefully on disctonnect and Shutdown
+[x] Recover from device lock?
