@@ -33,7 +33,7 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-var version = "0.1.17"
+var version = "0.2.0"
 
 type Config struct {
 	Port   int     `json:"Port"`
