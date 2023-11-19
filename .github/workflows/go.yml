@@ -19,6 +19,9 @@ jobs:
         with:
           go-version: 1.17 
 
+      - name: Set up MinGW
+        uses: egor-tensin/setup-mingw@v2
+
       - name: Build and Release
         id: build_and_release
         run: |
@@ -38,7 +41,12 @@ jobs:
               binary_name="varanny${extension}"
               zip_name="${binary_name}-${os}-${arch}.zip"
               
-              GOOS=$os GOARCH=$arch go build -o "$binary_name" -v ./...
+              if [ "$os" == "windows" ]; then              
+                CC=x86_64-w64-mingw32-gcc GOOS=$os GOARCH=$arch CGO_ENABLED=1 go build -o "$binary_name" -v ./...
+              else
+                GOOS=$os GOARCH=$arch CGO_ENABLED=1 go build -o "$binary_name" -v ./...
+              fi
+
               zip "$zip_name" "$binary_name" "varanny.json"
               
               echo "::set-output name=binary_name::$binary_name"
