@@ -27,7 +27,7 @@ jobs:
         run: |
           for os in linux windows; do
             if [ "$os" == "linux" ]; then
-              architectures=(amd64 arm64)
+              architectures=(amd64)
             else
               architectures=(amd64)
             fi
