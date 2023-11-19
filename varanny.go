@@ -33,11 +33,11 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-var version = "0.2.0"
+var version = "0.2.1"
 
 type Config struct {
 	Port   int     `json:"Port"`
-	Delay  int     `json:"Delay,default=10"`
+	Delay  int     `json:"Delay"`
 	Modems []Modem `json:"Modems"`
 }
 type Modem struct {
@@ -414,6 +414,9 @@ func handleConnection(conn net.Conn, p *program) {
 func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
 	var name string
 
+	log.Println("Advertising DNS-SD services")
+	printMulticastInterfaces()
+
 	for _, modem := range modems {
 		if modem.Port != 0 {
 			options := []string{}
@@ -448,9 +451,26 @@ func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
 	return servers
 }
 
-func (p *program) run() {
-	log.Println("Starting launcher, listening on port ", p.Port)
+// Print out all the broadcast network interfaces
+func printMulticastInterfaces() {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	interfaces := []string{}
+	for _, iface := range ifaces {
+		if (iface.Flags & net.FlagUp) == 0 {
+			continue // interface down
+		}
+		if (iface.Flags & net.FlagBroadcast) > 0 {
+			interfaces = append(interfaces, iface.Name)
+		}
+	}
+	log.Println("Multicast network interfaces:", interfaces)
+}
+
+func (p *program) run() {
 	servers := advertiseServices(p.Modems, p.Port)
 	defer func() {
 		for _, server := range servers {
@@ -464,6 +484,8 @@ func (p *program) run() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Listening on", ln.Addr())
+	log.Println("Waiting for connections...")
 
 	go func() {
 		for {
@@ -526,9 +548,6 @@ func main() {
 
 	prg.validateConfig()
 
-	// Delay start of service to allow time for hotspot network to come up
-	time.Sleep(time.Duration(config.Delay) * time.Second)
-
 	// Intercept SIGINT and SIGTERM to allow for graceful shutdown
 	go func() {
 		c := make(chan os.Signal, 1)
@@ -537,6 +556,15 @@ func main() {
 		log.Println("Shutting down...")
 		cancel()
 	}()
+
+	log.Println("Starting varanny", version)
+
+	// Delay start of service to allow time for hotspot network to come up
+	// Provide a default valut for Delay if not defined in config
+	if config.Delay == 0 {
+		config.Delay = 10
+	}
+	time.Sleep(time.Duration(config.Delay) * time.Second)
 
 	prg.run()
 }
