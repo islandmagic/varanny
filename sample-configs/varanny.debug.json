@@ -7,7 +7,7 @@
       "Port": 8300
     },
     {
-      "Name": "VARA FM Modem",
+      "Name": "fm",
       "Type": "fm",
   	  "Cmd": "/Users/gauberger/bin/subl",
       "Args": "",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "Name": "VARA HF Modem",
+      "Name": "hf",
       "Type": "hf",
       "Cmd": "/Users/gauberger/bin/subl",
       "Args": "",
