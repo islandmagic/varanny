@@ -33,7 +33,7 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-var version = "0.2.3"
+var version = "0.2.4"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -205,7 +205,7 @@ func handleConnection(conn net.Conn, p *program) {
 		conn.Close()
 		close(dbfsLevels)
 		close(cmdChannel)
-		close(stop)
+		//		close(stop)
 	}()
 
 	// Start a separate goroutine to read from a TCP socket
@@ -317,7 +317,7 @@ func handleConnection(conn net.Conn, p *program) {
 						return
 					} else {
 						// Wait for modem to start and bind to their ports
-						//time.Sleep(3 * time.Second)
+						time.Sleep(3 * time.Second)
 						conn.Write([]byte("OK\n"))
 					}
 				} else {
