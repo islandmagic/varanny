@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"regexp"
 	"strings"
 	"time"
 	"unsafe"
@@ -124,6 +125,12 @@ func Monitor(deviceInfo malgo.DeviceInfo, dbfsLevels chan DbfsLevel, stop chan b
 	}
 }
 
+func sanitize(input string) string {
+	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
+	sanitized := reg.ReplaceAllString(input, "")
+	return sanitized
+}
+
 // Find device based on name
 func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
 	context, err := malgo.InitContext(nil, malgo.ContextConfig{}, func(message string) {
@@ -143,7 +150,12 @@ func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
 		log.Println("Device name: ", info.Name())
 		// Vara truncate the name to 32 characters
 		// match if the name is a prefix of the device name
-		if strings.HasPrefix(info.Name(), name) {
+		if strings.HasPrefix(sanitize(info.Name()), sanitize(name)) {
+			return info, nil
+		}
+
+		// Linux can add some prefix to the device name in the .ini
+		if strings.Contains(sanitize(name), sanitize(info.Name())) {
 			return info, nil
 		}
 	}
