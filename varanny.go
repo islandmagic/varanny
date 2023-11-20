@@ -33,7 +33,7 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-var version = "0.2.1"
+var version = "0.2.2"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -347,6 +347,10 @@ func handleConnection(conn net.Conn, p *program) {
 						if iniFilePath == "" {
 							// Use default .ini file name
 							iniFilePath = DefaultVaraConfigFile(modem.Cmd)
+							if !FileExists(iniFilePath) {
+								// Try args for linux implementations
+								iniFilePath = DefaultVaraConfigFile(modem.Args)
+							}
 						}
 						// Lookup audio device name
 						audioDeviceName, err := GetInputDeviceName(iniFilePath)
