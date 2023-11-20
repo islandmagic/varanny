@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
@@ -137,7 +138,9 @@ func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
 	infos, err := context.Devices(malgo.Capture)
 	chk(err)
 
+	log.Println("Found capture audio devices: ", len(infos))
 	for _, info := range infos {
+		log.Println("Device name: ", info.Name())
 		// Vara truncate the name to 32 characters
 		// match if the name is a prefix of the device name
 		if strings.HasPrefix(info.Name(), name) {
