@@ -2,7 +2,7 @@
 
 `varanny` is an enhancement tool for VARA, a widely used software modem in amateur radio digital transmissions. VARA functions through two TCP ports - one for commands, the other for data. This TCP/IP interaction enables the VARA modem software to run on a radio-connected, headless computer, while client applications operate on a separate network device. However, since VARA wasn't designed to function as a service, this setup comes with certain limitations.
 
-`varanny` steps in to address these limitations, acting as a 'nanny' for VARA. It offers two primary capabilities:
+## Overview
 
 ```
 ┌────────────────────┐                ┌──────────────────────────┐                  ┌────────────────────┐   
@@ -39,6 +39,8 @@
 │    iPhone (iOS)    │                │    Headless Computer     │                  │ Sound Card Adapter │   
 └────────────────────┘                └──────────────────────────┘                  └────────────────────┘   
 ```
+
+`varanny` steps in to address these limitations, acting as a 'nanny' for VARA. It offers two primary capabilities:
 
 ## Service Announcement
 `varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and command port configured for that instance. In VARA modems, the data port number is always one more than the command port number.
@@ -187,6 +189,10 @@ Ensure VARA is installed in its default location and wine executable is in the P
   ]
 }
 ```
+
+## RadioMail Support
+
+https://github.com/islandmagic/varanny/assets/3819/08a114bf-8e54-412f-bad4-21064aff69c1
 
 ## Troubleshooting
 
