@@ -82,13 +82,11 @@ jobs:
         with:
           path: artifacts
 
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
+      - name: Upload Release Assets
+        id: upload_release_assets
+        uses: dwenegar/upload-release-assets@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./artifacts/varanny-${{ matrix.os }}-${{ matrix.arch }}.zip
-          asset_name: varanny-${{ matrix.os }}-${{ matrix.arch }}.zip
-          asset_content_type: application/octet-stream
+          release_id: ${{ steps.create_release.outputs.id }}
+          assets_path: "./artifacts/*.zip"
