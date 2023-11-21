@@ -108,12 +108,19 @@ To set up `varanny`:
 1. Extract the zip into a local directory. Note: Windows makes you jump thru all sorts of hoops to run an `.exe` you downloaded from the internet. You should be used to it by now.
 1. Launch the `varanny` executable. You could either place a shortcut in the startup folder or write a script to start it at boot time.
 
-Alternatively, you can build `varanny` from source.
 
+### Building from Source
+Alternatively, you can build `varanny` from source.
+Install go for your platform https://go.dev
 ```
 git checkout git@github.com:islandmagic/varanny.git
 cd varanny
-go build
+CGO_ENABLED=1 go build
+```
+When building on Raspberry Pi arm, you may need:
+```
+sudo apt-get install -y libatomic1
+CGO_ENABLED=1 CGO_LDFLAGS="-latomic" go build
 ```
 
 ## Configuration
