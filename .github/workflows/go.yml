@@ -9,60 +9,49 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+    strategy:
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            ccompiler: x86_64-w64-mingw32-gcc
+            ext: .exe
+          - os: linux
+            arch: amd64
+            ccompiler: gcc
+            ext: 
+          - os: linux
+            arch: arm64
+            ccompiler: aarch64-linux-gnu-gcc
+            ext: 
+          - os: linux
+            arch: arm
+            ccompiler: arm-linux-gnueabihf-gcc
+            ext: 
+
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.21.4
+        id: go
 
       - name: Set up MinGW
         uses: egor-tensin/setup-mingw@v2
 
-      - name: Install ARM64 cross-compiler
-        run: sudo apt-get install -y gcc-aarch64-linux-gnu
-
-      - name: Build and Release
-        id: build_and_release
+      - name: Install ARM cross-compiler
         run: |
-          for os in linux windows; do
-            if [ "$os" == "linux" ]; then
-              architectures=(amd64 arm64)
-            else
-              architectures=(amd64)
-            fi
-            
-            for arch in "${architectures[@]}"; do
-              extension=""
-              if [ "$os" == "windows" ]; then
-                extension=".exe"
-              fi
-              
-              binary_name="varanny${extension}"
-              zip_name="${binary_name}-${os}-${arch}.zip"
-              
-              if [ "$os" == "windows" ]; then              
-                CC=x86_64-w64-mingw32-gcc GOOS=$os GOARCH=$arch CGO_ENABLED=1 go build -o "$binary_name" -v ./...
-              else
-                if [ "$arch" == "arm64" ]; then
-                  CC=aarch64-linux-gnu-gcc GOOS=$os GOARCH=$arch CGO_ENABLED=1 go build -o "$binary_name" -v ./...
-                else
-                  CC=gcc GOOS=$os GOARCH=$arch CGO_ENABLED=1 go build -o "$binary_name" -v ./...
-                fi
-              fi
-
-              zip "$zip_name" "$binary_name" "varanny.json"
-              
-              echo "::set-output name=binary_name::$binary_name"
-              echo "::set-output name=zip_name::$zip_name"
-            done
-          done
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf libatomic1
           
-          echo "::set-output name=os::${{ matrix.os }}"
-          echo "::set-output name=arch::${{ matrix.arch }}"
+      - name: Build
+        id: build
+        run: |
+          CGO_ENABLED=1 CC=${{ matrix.ccompiler }} CGO_LDFLAGS="-latomic" GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -o "varanny${{ matrix.ext }}" -v ./...
+          zip ""varanny-${{ matrix.os }}-${{ matrix.arch }}.zip" "varanny${{ matrix.ext }}" "varanny.json"
 
       - name: Create Release
         id: create_release
