@@ -53,6 +53,19 @@ jobs:
           CGO_ENABLED=1 CC=${{ matrix.ccompiler }} CGO_LDFLAGS="-latomic" GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -o "varanny${{ matrix.ext }}" -v ./...
           zip "varanny-${{ matrix.os }}-${{ matrix.arch }}.zip" "varanny${{ matrix.ext }}" "varanny.json"
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: varanny-${{ matrix.os }}-${{ matrix.arch }}
+          path: varanny-${{ matrix.os }}-${{ matrix.arch }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -64,11 +77,18 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Assets
-        id: upload_release_assets
-        uses: dwenegar/upload-release-assets@v1
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          release_id: ${{ steps.create_release.outputs.id }}
-          assets_path: "*.zip"
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./artifacts/varanny-${{ matrix.os }}-${{ matrix.arch }}.zip
+          asset_name: varanny-${{ matrix.os }}-${{ matrix.arch }}.zip
+          asset_content_type: application/octet-stream
