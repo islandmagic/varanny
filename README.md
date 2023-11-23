@@ -208,6 +208,8 @@ To validate your configuration, the easiest is to run an interactive session aga
 1. Start `varanny` on the host.
 2. From a different computer, verify that modems are being advertised on the network. The following commands should list the various modems defined in you `.json` configuration file.
 
+On macOS
+
 ```
 $ dns-sd -B _varafm-modem._tcp
 Browsing for _varafm-modem._tcp
@@ -224,7 +226,24 @@ DATE: ---Mon 06 Nov 2023---
 Timestamp     A/R    Flags  if Domain               Service Type         Instance Name
 16:14:35.574  Add        3   7 local.               _varahf-modem._tcp.  IC705HF
 ```
+
+On Linux
+
+```
+$ avahi-browse -v _varafm-modem._tcp
+Server version: avahi 0.8; Host name: t4.local
+E Ifce Prot Name                                          Type                 Domain
++ wlp2s0 IPv6 IC705FM                                       _varafm-modem._tcp   local
++ wlp2s0 IPv6 THD74FM                                       _varafm-modem._tcp   local
++ wlp2s0 IPv4 THD74FM                                       _varafm-modem._tcp   local
++ wlp2s0 IPv4 IC705FM                                       _varafm-modem._tcp   local
+: Cache exhausted
+: All for now
+```
+
 3. Lookup the host address for a particular modem.
+
+On macOS
 
 ```
 $ dns-sd -L "IC705FM" _varafm-modem._tcp local
@@ -233,6 +252,36 @@ DATE: ---Mon 06 Nov 2023---
  16:58:59.059  ...STARTING...
  16:58:59.059  IC705FM._varafm-modem._tcp.local. can be reached at t4windoz.local.:8300 (interface 7)
  launchport=8273\;
+```
+
+Or on Linux
+
+```
+$ avahi-browse -r _varafm-modem._tcp
++ wlp2s0 IPv6 IC705FM                                       _varafm-modem._tcp   local
++ wlp2s0 IPv6 THD74FM                                       _varafm-modem._tcp   local
++ wlp2s0 IPv4 THD74FM                                       _varafm-modem._tcp   local
++ wlp2s0 IPv4 IC705FM                                       _varafm-modem._tcp   local
+= wlp2s0 IPv6 IC705FM                                       _varafm-modem._tcp   local
+   hostname = [t4windoz.local]
+   address = [192.168.137.1]
+   port = [8300]
+   txt = ["launchport=8273;"]
+= wlp2s0 IPv6 THD74FM                                       _varafm-modem._tcp   local
+   hostname = [t4windoz.local]
+   address = [192.168.137.1]
+   port = [8300]
+   txt = ["launchport=8273;"]
+= wlp2s0 IPv4 THD74FM                                       _varafm-modem._tcp   local
+   hostname = [t4windoz.local]
+   address = [192.168.137.1]
+   port = [8300]
+   txt = ["launchport=8273;"]
+= wlp2s0 IPv4 IC705FM                                       _varafm-modem._tcp   local
+   hostname = [t4windoz.local]
+   address = [192.168.137.1]
+   port = [8300]
+   txt = ["launchport=8273;"]
 ```
 
 4. Connect to `varanny` instance. Replace `t4windoz.local` with your host name returned in the above command.
