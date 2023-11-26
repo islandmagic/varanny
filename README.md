@@ -163,7 +163,7 @@ Ensure VARA is installed in its default location and wine executable is in the P
         "Port": 4532,
         "Dialect": "hamlib",
         "Cmd": "rigctld",
-        "Args": "-m 3073 -c 148 -r /dev/ic-705a -s 19200"
+        "Args": "-m 3085 -r /dev/ic-705a -s 19200"
       }
     },
     {
@@ -190,7 +190,7 @@ Ensure VARA is installed in its default location and wine executable is in the P
         "Port": 4532,
         "Dialect": "hamlib",
         "Cmd": "rigctld",
-        "Args": "-m 3073 -c 148 -r /dev/ic-705a -s 19200"
+        "Args": "-m 3085 -r /dev/ic-705a -s 19200"
       }
     }
   ]
