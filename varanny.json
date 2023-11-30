@@ -24,7 +24,7 @@
         "Port": 4532,
         "Dialect": "hamlib",
         "Cmd": "C:\\Program Files\\hamlib-w64-4.5.5\\bin\\rigctld.exe",
-        "Args": "-m 3073 -r com7"
+        "Args": "-m 3085 -c 0xA4 -r com7 -s 19200 -vvvvv"
       }
     }
   ]
