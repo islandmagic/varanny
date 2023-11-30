@@ -33,7 +33,7 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-var version = "0.2.6"
+var version = "0.2.7"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -146,7 +146,6 @@ func createCommand(multiWriter io.Writer, path string, args ...string) *exec.Cmd
 		return nil
 	}
 	cmd := exec.Command(fullPath, args...)
-
 	cmd.Stdout = multiWriter
 	cmd.Stderr = multiWriter
 	cmd.Dir = filepath.Dir(fullPath)
@@ -201,8 +200,10 @@ func handleConnection(conn net.Conn, p *program) {
 			modem.mu.Unlock()
 		}
 
-		stop <- true
 		conn.Close()
+
+		stop <- true
+
 		close(dbfsLevels)
 		close(cmdChannel)
 		//		close(stop)
