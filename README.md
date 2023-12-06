@@ -48,7 +48,7 @@
 The service are broadcasted as `_varafm-modem._tcp` and `_varahf-modem._tcp` depending on the modem type and contain a TXT entry with `;` separated options.
 
 ### Supported options
-* `launchport=` port of varanny launcher. Present if there is a cmd specified in the configuration file.
+* `launchport=` port of varanny launcher.
 * `catport=` port of the cat control daemon, if any.
 * `catdialect` type of cat control daemon. Currently only `hamlib` is supported.
 
@@ -117,31 +117,36 @@ git checkout git@github.com:islandmagic/varanny.git
 cd varanny
 CGO_ENABLED=1 go build
 ```
+
 When building on Raspberry Pi arm, you may need:
 ```
 sudo apt-get install -y libatomic1
 CGO_ENABLED=1 CGO_LDFLAGS="-latomic" go build
 ```
 
+To cross compile a Windows build from a *nix OS:
+```
+CC=x86_64-w64-mingw32-gcc GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build
+```
+
 ## Configuration
-To configure `varanny`, edit the `varanny.json` file as per your needs. If you do not want the VARA executable to be managed by `varanny`, leave the cmd path field empty ("").
+To configure `varanny`, edit the `varanny.json` file as per your needs.
 
 ### Configuration Attributes
 Configuration must be a valid `.json` file. You can define as many "modems" as you'd like. This can be handy if you use the same computer to connect to multiple radios that require different configurations. If you need to run VARA with different parameters, simply clone your VARA `.ini` configuration file and specify it as the `Config` attribute in `varanny.json`.
 
-* `Port` port that varanny agent binds to.
+* `Port` port that `varanny` agent binds to.
 * `Modems` arrray containing modem definitions.
 * `Name` name the modem will be advertised under. **Must be unique**.
 * `Type` type of VARA modem, `fm` or `hf`.
-* `Cmd` fully qualified path to the executable to start this VARA modem.
-* `Args` arguments to pass to the executable.
-* `Config` optional path to a VARA configuration file. If present, upon starting a session, a backup of the existing `VARA.ini` or `VARAFM.ini` file is created and then the specified configuration file is applied. Once the session concludes, the original `.ini` file is restored. This feature ensures the preservation of original settings while enabling different configurations for specific setups such as a sound card name. Note that the configuration file must be in the same directory as the original `VARA.ini` or `VARAFM.ini` files.
-* `Port` command port defined in the VARA modem application.
+* `Cmd` fully qualified path to the executable to start this VARA modem. Note for Windows paths, the backslash separators must be escaped using `\\`
+* `Args` optional arguments to pass to the executable.
+* `Config` optional path to a VARA configuration file. If present, upon starting a session, a backup of the existing `VARA.ini` or `VARAFM.ini` file is created and then the specified configuration file is applied. Once the session concludes, the original `.ini` file is restored. This feature ensures the preservation of original settings while enabling different configurations for specific setups such as a sound card name.
 * `CatCtrl` optional CAT control definition.
 * `Port` port used by the CAT control agent.
 * `Dialect` protocol used by the CAT control agent. Currently only `hamlib` is supported.
-* `Cmd` fully qualified path to the executable to start the CAT control agent.
-* `Args` arguments to pass to the executable.
+* `Cmd` fully qualified path to the executable to start the CAT control agent. Note for Windows paths, the backslash separators must be escaped using `\\`
+* `Args` optional arguments to pass to the executable.
 
 [Sample Configuration](https://github.com/islandmagic/varanny/blob/master/varanny.json)
 
@@ -158,7 +163,6 @@ Ensure VARA is installed in its default location and wine executable is in the P
       "Cmd": "wine",
       "Args": "/home/georges/.wine/drive_c/VARA FM/VARAFM.exe",
       "Config": "/home/georges/.wine/drive_c/VARA FM/VARAFM.ic705.ini",
-      "Port": 8300,
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",
@@ -172,7 +176,6 @@ Ensure VARA is installed in its default location and wine executable is in the P
       "Cmd": "wine",
       "Args": "/home/georges/.wine/drive_c/VARA FM/VARAFM.exe",
       "Config": "/home/georges/.wine/drive_c/VARA FM/VARAFM.thd74.ini",
-      "Port": 8300,
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",
@@ -185,7 +188,6 @@ Ensure VARA is installed in its default location and wine executable is in the P
       "Type": "hf",
       "Cmd": "wine",
       "Args": "/home/georges/.wine/drive_c/VARA/VARA.exe",
-      "Port": 8400,
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",

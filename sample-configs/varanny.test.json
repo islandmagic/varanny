@@ -2,16 +2,9 @@
   "Port": 8273,
   "Modems" : [
     {
-      "Name": "Minimal VARA FM Modem",
-      "Type": "fm",
-      "Port": 8300
-    },
-    {
       "Name": "VARA FM Modem",
       "Type": "fm",
   	  "Cmd": "/Users/gauberger/bin/subl",
-      "Args": "",
-      "Port": 8300,
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",
@@ -23,8 +16,6 @@
       "Name": "VARA HF Modem",
       "Type": "hf",
       "Cmd": "/Users/gauberger/bin/subl",
-      "Args": "",
-      "Port": 8400,
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",

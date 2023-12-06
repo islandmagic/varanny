@@ -7,7 +7,6 @@
       "Cmd": "wine",
       "Args": "/home/georges/.wine/drive_c/VARA FM/VARAFM.exe",
       "Config": "/home/georges/.wine/drive_c/VARA FM/VARAFM.ic705.ini",
-      "Port": 8300,
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",
@@ -21,7 +20,6 @@
       "Cmd": "wine",
       "Args": "/home/georges/.wine/drive_c/VARA FM/VARAFM.exe",
       "Config": "/home/georges/.wine/drive_c/VARA FM/VARAFM.thd74.ini",
-      "Port": 8300,
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",
@@ -34,7 +32,6 @@
       "Type": "hf",
       "Cmd": "wine",
       "Args": "/home/georges/.wine/drive_c/VARA/VARA.exe",
-      "Port": 8400,
       "CatCtrl": {
         "Port": 4532,
         "Dialect": "hamlib",

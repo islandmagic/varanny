@@ -26,15 +26,25 @@ func GetInputDeviceName(path string) (string, error) {
 	return section.Key("Input Device Name").String(), err
 }
 
-func DefaultVaraConfigFile(fullexecpath string) string {
+func GetPort(path string) (int, error) {
+	inidata, err := ini.Load(path)
+	if err != nil {
+		fmt.Printf("Fail to read file: %v", err)
+		return 0, err
+	}
+	section := inidata.Section("Setup")
+	return section.Key("TCP Command Port").Int()
+}
+
+func DefaultVaraConfigFile(fullexecpath string) (string, error) {
 	dir, execname := filepath.Split(fullexecpath)
 	switch execname {
 	case "VARA.exe":
-		return filepath.Join(dir, "VARA.ini")
+		return filepath.Join(dir, "VARA.ini"), nil
 	case "VARAFM.exe":
-		return filepath.Join(dir, "VARAFM.ini")
+		return filepath.Join(dir, "VARAFM.ini"), nil
 	default:
-		return ""
+		return "", fmt.Errorf("Unexpected VARA executable name %s", fullexecpath)
 	}
 }
 

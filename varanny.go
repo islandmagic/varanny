@@ -33,7 +33,7 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-var version = "0.2.7"
+var version = "0.2.9"
 
 type Config struct {
 	Port   int     `json:"Port"`
@@ -46,7 +46,6 @@ type Modem struct {
 	Cmd     string  `json:"Cmd"`
 	Args    string  `json:"Args"`
 	Config  string  `json:"Config"`
-	Port    int     `json:"Port"`
 	CatCtrl CatCtrl `json:"CatCtrl,omitempty"`
 	mu      sync.Mutex
 }
@@ -69,6 +68,13 @@ func assertExecutable(path string) error {
 	return nil
 }
 
+func assertConfigFile(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return fmt.Errorf("Failed to find config file %q: %v", path, err)
+	}
+	return nil
+}
+
 func (p *program) validateConfig() {
 	// Iterate over modems and exit if no modem is defined
 	if len(p.Modems) == 0 {
@@ -77,12 +83,22 @@ func (p *program) validateConfig() {
 
 	// Iterate over modems and validate that all cmd map to an existing file
 	for _, modem := range p.Modems {
-		if modem.Cmd != "" {
+		if modem.Cmd == "" {
+			log.Fatalf("Modem executable for '%s' not defined", modem.Name)
+		} else {
 			err := assertExecutable(modem.Cmd)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
+
+		if modem.Config != "" {
+			err := assertConfigFile(modem.Config)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
 		if modem.CatCtrl.Cmd != "" {
 			err := assertExecutable(modem.CatCtrl.Cmd)
 			if err != nil {
@@ -151,6 +167,29 @@ func createCommand(multiWriter io.Writer, path string, args ...string) *exec.Cmd
 	cmd.Dir = filepath.Dir(fullPath)
 	cmd.Env = os.Environ()
 	return cmd
+}
+
+func defaultIniConfigPath(modem *Modem) (string, error) {
+	// Figure out .ini file name for this modem
+	iniFilePath, _ := DefaultVaraConfigFile(modem.Cmd)
+	if !FileExists(iniFilePath) {
+		// Try args for linux implementations
+		iniFilePath, _ = DefaultVaraConfigFile(modem.Args)
+		if !FileExists(iniFilePath) {
+			log.Println("ERROR cannot find default .ini file for modem", modem.Name)
+			return "", fmt.Errorf("cannot find default .ini file for modem %s", modem.Name)
+		}
+	}
+	return iniFilePath, nil
+}
+
+func specifiedIniConfigPath(modem *Modem) (string, error) {
+	iniFilePath := modem.Config
+	if iniFilePath == "" {
+		// If nothing specified, use default
+		return defaultIniConfigPath(modem)
+	}
+	return iniFilePath, nil
 }
 
 func handleConnection(conn net.Conn, p *program) {
@@ -273,20 +312,20 @@ func handleConnection(conn net.Conn, p *program) {
 
 						if modemCmd != nil {
 
-							// Swap the config file to the one defined in the modem
+							// Swap the config file to the one defined in the modem if needed
 							if modem.Config != "" {
-								// Rename existing config file
-								// Extract path from modem Cmd to find existing config file
-								if modem.Type == "fm" {
-									configPath = filepath.Join(filepath.Dir(modem.Config), "VARAFM.ini")
-								} else {
-									configPath = filepath.Join(filepath.Dir(modem.Config), "VARA.ini")
+
+								configPath, err = defaultIniConfigPath(modem)
+
+								if err != nil {
+									conn.Write([]byte("ERROR " + err.Error() + "\n"))
+									return
 								}
 								modemConfigPath := modem.Config
 
 								if modemConfigPath != configPath {
 									// Check if requested modem config exists
-									if FileExists(modemConfigPath) == false {
+									if !FileExists(modemConfigPath) {
 										log.Println("Modem config file", modemConfigPath, "does not exist")
 									} else {
 										// Make backup
@@ -344,22 +383,20 @@ func handleConnection(conn net.Conn, p *program) {
 						defer modem.mu.Unlock()
 
 						// Figure out .ini file name for this modem
-						iniFilePath := modem.Config
-						if iniFilePath == "" {
-							// Use default .ini file name
-							iniFilePath = DefaultVaraConfigFile(modem.Cmd)
-							if !FileExists(iniFilePath) {
-								// Try args for linux implementations
-								iniFilePath = DefaultVaraConfigFile(modem.Args)
-							}
+						iniFilePath, err := specifiedIniConfigPath(modem)
+						if err != nil {
+							conn.Write([]byte("ERROR " + err.Error() + "\n"))
+							return
 						}
+
 						// Lookup audio device name
 						audioDeviceName, err := GetInputDeviceName(iniFilePath)
 						if err != nil {
 							conn.Write([]byte("ERROR audio device not found in " + iniFilePath + "\n"))
 							return
 						}
-						log.Println("Monitoring audio device '" + audioDeviceName + "'")
+
+						log.Println("Monitoring audio device '" + audioDeviceName + "' found in " + iniFilePath)
 						// start audio monitor
 						device, err := FindAudioDevice(audioDeviceName)
 						if err != nil {
@@ -396,7 +433,6 @@ func handleConnection(conn net.Conn, p *program) {
 							conn.Write([]byte("  Cmd: " + modem.Cmd + "\n"))
 							conn.Write([]byte("  Args: " + modem.Args + "\n"))
 							conn.Write([]byte("  Config: " + modem.Config + "\n"))
-							conn.Write([]byte("  Port: " + strconv.Itoa(modem.Port) + "\n"))
 							conn.Write([]byte("  CatCtrl.Port: " + strconv.Itoa(modem.CatCtrl.Port) + "\n"))
 							conn.Write([]byte("  CatCtrl.Dialect: " + modem.CatCtrl.Dialect + "\n"))
 							conn.Write([]byte("  CatCtrl.Cmd: " + modem.CatCtrl.Cmd + "\n"))
@@ -423,13 +459,10 @@ func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
 	printMulticastInterfaces()
 
 	for _, modem := range modems {
-		if modem.Port != 0 {
+		if modem.Cmd != "" {
 			options := []string{}
 
-			// Advertise the launcher port if the modem has a command
-			if modem.Cmd != "" || modem.CatCtrl.Cmd != "" {
-				options = addOption(options, "launchport", strconv.Itoa(port))
-			}
+			options = addOption(options, "launchport", strconv.Itoa(port))
 
 			if modem.CatCtrl.Port != 0 {
 				options = addOption(options, "catport", strconv.Itoa(modem.CatCtrl.Port))
@@ -446,7 +479,19 @@ func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
 				log.Fatal("Unknown modem type: ", modem.Type)
 			}
 
-			server, err := zeroconf.Register(modem.Name, name, "local.", modem.Port, options, nil)
+			// Figure out .ini file name for this modem
+			iniFilePath, err := specifiedIniConfigPath(&modem)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// Lookup port
+			port, err := GetPort(iniFilePath)
+			if err != nil {
+				log.Fatal("ERROR port number not found in " + iniFilePath)
+			}
+
+			server, err := zeroconf.Register(modem.Name, name, "local.", port, options, nil)
 			if err != nil {
 				log.Fatal(err)
 			}
