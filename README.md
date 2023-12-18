@@ -199,9 +199,22 @@ Ensure VARA is installed in its default location and wine executable is in the P
 }
 ```
 
-## RadioMail Support
+## RadioMail Integration 
+
+[RadioMail](https://radiomail.app), the winlink email app for iOS has integrated native support for `varanny`. See it in action:
 
 https://github.com/islandmagic/varanny/assets/3819/08a114bf-8e54-412f-bad4-21064aff69c1
+
+### VARA HotSpot Setup Guides
+
+Follow these guides and watch the videos to learn how to utilize `varanny` to create a VARA hotspot on a headless computer and send and receive emails from anywhere.
+
+* [VARA HotSpot Windows Setup Guide](https://github.com/islandmagic/varanny/wiki/VARA-HotSpot-Windows-Setup-Guide)
+* [VARA HotSpot Linux Setup Guide](https://github.com/islandmagic/varanny/wiki/VARA-HotSpot-Linux-Setup-Guide)
+
+[![Video](https://img.youtube.com/vi/7bOmWUk1XhM/maxresdefault.jpg)](https://www.youtube.com/watch?v=7bOmWUk1XhM)
+
+[![Video](https://img.youtube.com/vi/kPDTH4L319Q/maxresdefault.jpg)](https://www.youtube.com/watch?v=kPDTH4L319Q)
 
 ## Troubleshooting
 
