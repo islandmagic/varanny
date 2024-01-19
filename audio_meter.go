@@ -12,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/gen2brain/malgo"
+	"github.com/texttheater/golang-levenshtein/levenshtein"
 )
 
 type DbfsLevel struct {
@@ -128,10 +129,24 @@ func Monitor(deviceInfo malgo.DeviceInfo, dbfsLevels chan DbfsLevel, stop chan b
 func sanitize(input string) string {
 	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
 	sanitized := reg.ReplaceAllString(input, "")
-	return sanitized
+	return strings.ToLower(sanitized)
 }
 
-// Find device based on name
+func max(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+func isSimilar(a, b string) bool {
+	distance := levenshtein.DistanceForStrings([]rune(a), []rune(b), levenshtein.DefaultOptions)
+	maxLength := max(len(a), len(b))
+	threshold := 0.2 // This threshold can be adjusted if a match cannot be found
+
+	return float64(distance)/float64(maxLength) < threshold
+}
+
 func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
 	context, err := malgo.InitContext(nil, malgo.ContextConfig{}, func(message string) {
 		fmt.Printf(message)
@@ -148,14 +163,7 @@ func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
 	log.Println("Found capture audio devices: ", len(infos))
 	for _, info := range infos {
 		log.Println("Device name: ", info.Name())
-		// Vara truncate the name to 32 characters
-		// match if the name is a prefix of the device name
-		if strings.HasPrefix(sanitize(info.Name()), sanitize(name)) {
-			return info, nil
-		}
-
-		// Linux can add some prefix to the device name in the .ini
-		if strings.Contains(sanitize(name), sanitize(info.Name())) {
+		if isSimilar(sanitize(info.Name()), sanitize(name)) {
 			return info, nil
 		}
 	}
