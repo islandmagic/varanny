@@ -33,7 +33,9 @@ import (
 	"github.com/grandcat/zeroconf"
 )
 
-var version = "0.2.10"
+// This gets set at build time derived from the git tag
+// go build -ldflags "-X main.version=$(git describe --tags --always --dirty)"
+var version = "undefined"
 
 type Config struct {
 	Port   int     `json:"Port"`
