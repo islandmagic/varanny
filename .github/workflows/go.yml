@@ -50,7 +50,7 @@ jobs:
       - name: Build
         id: build
         run: |
-          CGO_ENABLED=1 CC=${{ matrix.ccompiler }} CGO_LDFLAGS="-latomic" GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -o "varanny${{ matrix.ext }}" -v ./... -ldflags "-X main.version=$(git describe --tags --always --dirty)"
+          CGO_ENABLED=1 CC=${{ matrix.ccompiler }} CGO_LDFLAGS="-latomic" GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -o "varanny${{ matrix.ext }}" -ldflags "-X main.version=$(git describe --tags --always --dirty)" -v ./... 
           zip "varanny-${{ matrix.os }}-${{ matrix.arch }}.zip" "varanny${{ matrix.ext }}" "varanny.json"
 
       - name: Upload artifact
