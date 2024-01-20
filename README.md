@@ -135,7 +135,8 @@ To configure `varanny`, edit the `varanny.json` file as per your needs.
 ### Configuration Attributes
 Configuration must be a valid `.json` file. You can define as many "modems" as you'd like. This can be handy if you use the same computer to connect to multiple radios that require different configurations. If you need to run VARA with different parameters, simply clone your VARA `.ini` configuration file and specify it as the `Config` attribute in `varanny.json`.
 
-* `Port` port that `varanny` agent binds to.
+* `Port` port that `varanny` agent binds to. Default is 8273.
+* 'Delay` delay before `varanny` binds to a network interface. This is useful to let some time for other software to establish a HotSpot configuration when booting up. Default is set to 10s.
 * `Modems` arrray containing modem definitions.
 * `Name` name the modem will be advertised under. **Must be unique**.
 * `Type` type of VARA modem, `fm` or `hf`.
