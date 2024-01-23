@@ -1,5 +1,5 @@
 /*
-	(c) 2023 by Island Magic Co. All rights reserved.
+
 
 	This program is a launcher for VARA modem programs. It can be used to start and stop
 	the modem programs remotely. It also advertises the modem programs using zeroconf.
@@ -38,18 +38,20 @@ import (
 var version = "undefined"
 
 type Config struct {
-	Port   int     `json:"Port"`
-	Delay  int     `json:"Delay"`
-	Modems []Modem `json:"Modems"`
+	AudioInputNameThreshold float64 `json:"AudioInputNameThreshold"`
+	Delay                   *int    `json:"Delay"` // allow 0 value, defaults to 10
+	Modems                  []Modem `json:"Modems"`
+	Port                    int     `json:"Port"`
 }
 type Modem struct {
-	Name    string  `json:"Name"`
-	Type    string  `json:"Type"`
-	Cmd     string  `json:"Cmd"`
-	Args    string  `json:"Args"`
-	Config  string  `json:"Config"`
-	CatCtrl CatCtrl `json:"CatCtrl,omitempty"`
-	mu      sync.Mutex
+	Name           string  `json:"Name"`
+	Type           string  `json:"Type"`
+	Cmd            string  `json:"Cmd"`
+	Args           string  `json:"Args"`
+	Config         string  `json:"Config"`
+	AudioInputName string  `json:"AudioInputName"`
+	CatCtrl        CatCtrl `json:"CatCtrl,omitempty"`
+	mu             sync.Mutex
 }
 type CatCtrl struct {
 	Port    int    `json:"Port"`
@@ -65,14 +67,14 @@ type program struct {
 func assertExecutable(path string) error {
 	_, err := exec.LookPath(path)
 	if err != nil {
-		return fmt.Errorf("Failed to find executable %q: %v", path, err)
+		return fmt.Errorf("failed to find executable %q: %v", path, err)
 	}
 	return nil
 }
 
 func assertConfigFile(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return fmt.Errorf("Failed to find config file %q: %v", path, err)
+		return fmt.Errorf("failed to find config file %q: %v", path, err)
 	}
 	return nil
 }
@@ -84,7 +86,8 @@ func (p *program) validateConfig() {
 	}
 
 	// Iterate over modems and validate that all cmd map to an existing file
-	for _, modem := range p.Modems {
+	for i := range p.Modems {
+		modem := &p.Modems[i]
 		if modem.Cmd == "" {
 			log.Fatalf("Modem executable for '%s' not defined", modem.Name)
 		} else {
@@ -145,6 +148,17 @@ func getConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// set default values
+	if conf.AudioInputNameThreshold == 0 {
+		conf.AudioInputNameThreshold = 0.7
+	}
+
+	if conf.Delay == nil {
+		conf.Delay = new(int)
+		*conf.Delay = 10
+	}
+
 	return conf, nil
 }
 
@@ -399,16 +413,17 @@ func handleConnection(conn net.Conn, p *program) {
 							return
 						}
 
-						// Lookup audio device name
 						audioDeviceName, err := GetInputDeviceName(iniFilePath)
-						if err != nil {
+						if modem.AudioInputName != "" {
+							audioDeviceName = modem.AudioInputName
+						} else if err != nil {
 							conn.Write([]byte("ERROR audio device not found in " + iniFilePath + "\n"))
 							return
 						}
 
 						log.Println("Monitoring audio device '" + audioDeviceName + "' found in " + iniFilePath)
 						// start audio monitor
-						device, err := FindAudioDevice(audioDeviceName)
+						device, err := FindAudioDevice(audioDeviceName, p.Config.AudioInputNameThreshold)
 						if err != nil {
 							conn.Write([]byte("ERROR audio device '" + audioDeviceName + "' not found\n"))
 							return
@@ -618,13 +633,12 @@ func main() {
 	}()
 
 	log.Println("Starting varanny", version)
-
-	// Delay start of service to allow time for hotspot network to come up
-	// Provide a default valut for Delay if not defined in config
-	if config.Delay == 0 {
-		config.Delay = 10
+	if *config.Delay > 0 {
+		log.Println("  Delaying startup for", *config.Delay, "seconds")
+		log.Println("  (if this is unwanted, set Delay to 0 in the config file)")
 	}
-	time.Sleep(time.Duration(config.Delay) * time.Second)
+
+	time.Sleep(time.Duration(*config.Delay) * time.Second)
 
 	prg.run()
 }

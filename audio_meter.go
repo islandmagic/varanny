@@ -139,18 +139,22 @@ func max(a, b int) int {
 	return b
 }
 
-func isSimilar(a, b string) bool {
+func stringSimilarity(a, b string) float64 {
 	distance := levenshtein.DistanceForStrings([]rune(a), []rune(b), levenshtein.DefaultOptions)
-	maxLength := max(len(a), len(b))
-	threshold := 0.6 // This threshold can be adjusted if a match cannot be found
-	similarity := float64(distance) / float64(maxLength)
 
-	return similarity < threshold
+	maxLength := float64(max(len(a), len(b)))
+	if maxLength == 0 {
+		return 1.0 // both strings are empty
+	}
+
+	similarity := 1 - (float64(distance) / maxLength)
+
+	return math.Max(0, math.Min(similarity, 1))
 }
 
-func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
+func FindAudioDevice(name string, matchThreshold float64) (malgo.DeviceInfo, error) {
 	context, err := malgo.InitContext(nil, malgo.ContextConfig{}, func(message string) {
-		fmt.Printf(message)
+		print(message)
 	})
 	chk(err)
 	defer func() {
@@ -163,9 +167,14 @@ func FindAudioDevice(name string) (malgo.DeviceInfo, error) {
 
 	log.Println("Found capture audio devices: ", len(infos))
 	for _, info := range infos {
-		log.Println("Device name: ", info.Name())
-		if isSimilar(sanitize(info.Name()), sanitize(name)) {
+		similarity := stringSimilarity(sanitize(info.Name()), sanitize(name))
+		if similarity >= matchThreshold {
+			log.Println("Device name (found match): ", info.Name(),
+				"(similarity: ", similarity, "threshold: ", matchThreshold, ")")
 			return info, nil
+		} else {
+			log.Println("Device name    (no match): ", info.Name(),
+				"(similarity: ", similarity, "threshold: ", matchThreshold, ")")
 		}
 	}
 	return malgo.DeviceInfo{}, fmt.Errorf("device %s not found", name)
