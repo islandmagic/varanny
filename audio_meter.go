@@ -77,7 +77,7 @@ When lambda returns false, the listening stops
 */
 func Monitor(deviceInfo malgo.DeviceInfo, dbfsLevels chan DbfsLevel, stop chan bool) {
 	ctx, err := malgo.InitContext(nil, malgo.ContextConfig{}, func(message string) {
-		fmt.Printf(message)
+		print(message)
 	})
 	chk(err)
 	defer func() {
@@ -117,7 +117,7 @@ func Monitor(deviceInfo malgo.DeviceInfo, dbfsLevels chan DbfsLevel, stop chan b
 	for {
 		select {
 		case <-stop:
-			fmt.Println("Stopping monitoring...")
+			print("Stopping monitoring...")
 			device.Uninit()
 			return
 		default:
@@ -133,18 +133,19 @@ func sanitize(input string) string {
 }
 
 func max(a, b int) int {
-    if a > b {
-        return a
-    }
-    return b
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func isSimilar(a, b string) bool {
 	distance := levenshtein.DistanceForStrings([]rune(a), []rune(b), levenshtein.DefaultOptions)
 	maxLength := max(len(a), len(b))
-	threshold := 0.2 // This threshold can be adjusted if a match cannot be found
+	threshold := 0.6 // This threshold can be adjusted if a match cannot be found
+	similarity := float64(distance) / float64(maxLength)
 
-	return float64(distance)/float64(maxLength) < threshold
+	return similarity < threshold
 }
 
 func FindAudioDevice(name string) (malgo.DeviceInfo, error) {

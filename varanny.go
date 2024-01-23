@@ -216,6 +216,10 @@ func handleConnection(conn net.Conn, p *program) {
 				log.Println("Shutdown modem process gracefully failed, killing")
 				modemCmd.Process.Kill()
 			}
+			processState, err := modemCmd.Process.Wait()
+			if err != nil || processState.Success() {
+				log.Println("Warning: awaiting termination of modem process failed")
+			}
 			modemCmd.Process.Release()
 		}
 
@@ -232,6 +236,10 @@ func handleConnection(conn net.Conn, p *program) {
 				log.Println("Shutdown cat control process gracefully failed, killing")
 				catCtrlCmd.Process.Kill()
 			}
+			processState, err := catCtrlCmd.Process.Wait()
+			if err != nil || processState.Success() {
+				log.Println("Warning: awaiting termination of modem process failed")
+			}
 			catCtrlCmd.Process.Release()
 		}
 
@@ -247,7 +255,7 @@ func handleConnection(conn net.Conn, p *program) {
 
 		close(dbfsLevels)
 		close(cmdChannel)
-		//		close(stop)
+		close(stop)
 	}()
 
 	// Start a separate goroutine to read from a TCP socket
