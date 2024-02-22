@@ -1,0 +1,41 @@
+{
+  "Port": 8273,
+  "Modems" : [
+    {
+      "Name": "UV5R",
+      "Type": "fm",
+      "Cmd": "C:\\VARA FM\\VARAFM.exe",
+      "Config": "C:\\VARA FM\\VARAFM.digirig.ini"
+    },
+    {
+      "Name": "FTM-6000R",
+      "Type": "fm",
+      "Cmd": "C:\\VARA FM\\VARAFM.exe",
+      "Config": "C:\\VARA FM\\VARAFM.ftm6000r.ini"
+    },
+    {
+      "Name": "FT818ND-FM",
+      "Type": "fm",
+      "Cmd": "C:\\VARA FM\\VARAFM.exe",
+      "Config": "C:\\VARA FM\\VARAFM.digirig.ini",
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib",
+        "Cmd": "C:\\Program Files\\hamlib-w64-4.5.5\\bin\\rigctld.exe",
+        "Args": "-m 1020 -s 38400 -r com3 -v"
+      }
+    },
+    {
+      "Name": "FT818ND-HF",
+      "Type": "hf",
+      "Cmd": "C:\\VARA\\VARA.exe",
+      "Config": "C:\\VARA\\VARA.digirig.ini",
+      "CatCtrl": {
+        "Port": 4532,
+        "Dialect": "hamlib",
+        "Cmd": "C:\\Program Files\\hamlib-w64-4.5.5\\bin\\rigctld.exe",
+        "Args": "-m 1020 -s 38400 -r com3 -v"
+      }
+    }
+  ]
+}
