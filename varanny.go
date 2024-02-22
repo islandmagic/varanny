@@ -283,7 +283,11 @@ func handleConnection(conn net.Conn, p *program) {
 				} else {
 					log.Println(err)
 				}
-				stop <- true
+				// Prevents sending to a closed channel which causes a panic
+				select {
+				case stop <- true:
+				default:
+				}
 				return
 			}
 			cmdChannel <- strings.TrimSpace(string(buffer[:n]))
