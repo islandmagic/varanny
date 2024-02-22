@@ -495,6 +495,7 @@ func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
 			}
 
 			// Advertise the modem based on its type
+			// TODO: Deprecate in the future when all clients have been updated
 			switch modem.Type {
 			case "fm":
 				name = "_varafm-modem._tcp"
@@ -502,6 +503,13 @@ func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
 				name = "_varahf-modem._tcp"
 			default:
 				log.Fatal("Unknown modem type: ", modem.Type)
+			}
+
+			modemType := strings.ToLower(modem.Type)
+			if modemType == "hf" || modemType == "fm" {
+				options = addOption(options, "type", modemType)
+			} else {
+				log.Fatal("Unknown modem type: ", modemType)
 			}
 
 			// Figure out .ini file name for this modem
@@ -516,7 +524,15 @@ func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
 				log.Fatal("ERROR port number not found in " + iniFilePath)
 			}
 
-			server, err := zeroconf.Register(modem.Name, name, "local.", port, options, nil)
+			// Advertise the modem using the legacy service name for backwards compatibility
+			// TODO: Deprecate in the future when all clients have been updated
+			legacyServiceNameServer, err := zeroconf.Register(modem.Name, name, "local.", port, options, nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+			servers = append(servers, legacyServiceNameServer)
+
+			server, err := zeroconf.Register(modem.Name, "_vara-modem._tcp", "local.", port, options, nil)
 			if err != nil {
 				log.Fatal(err)
 			}

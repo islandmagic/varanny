@@ -5,39 +5,39 @@
 ## Overview
 
 ```
-┌────────────────────┐                ┌──────────────────────────┐                  ┌────────────────────┐   
-│ ┌────────────────┐ │                │      ┌──────────────┐    │                  │                    │   
-│ │                │ │                │      │              │    │                  │                    │   
-│ │                │ │                │      │ ctrl         │    │                  │                    │   
-│ │                ├─┼────port 8273───┼──────▶              │    │                  │       Radio        │   
-│ │                │ │                │      │   varanny    │    │                  │                    │   
-│ │                │ │        ┌───────┼──────┤              │    │                  │                    │   
-│ │                │ │        │       │      │              │    │                  │                    │   
-│ │                │ │        │       │      │    manage    │    │                  └──────┬─┬─┬─┬───────┘   
-│ │                │ │        │       │      └──┬─────────┬─┘    │                         │ │ │ │           
-│ │                │ │        │       │         │         │      │                         │ │ │ │ TX        
-│ │                │ │     DNS-SD     │         │         │      │                Headset  │ │ │ │ RX        
-│ │                │ │     Service    │         │         ▽      │                 Jack    │ │ │ │ PTT       
-│ │                │ │  Announcement  │         │  ┌ ─ ─ ─ ─ ─   │                         │ │ │ │ GND       
-│ │                │ │        │       │         │    VARA.ini │┐ │                         │ │ │ │           
-│ │   RadioMail    │ │        │       │         │  └ ─ ─ ─ ─ ─   │                         │ │ │ │           
-│ │                │ │        │       │         │    └ ─ ─ ─ ─ ┘ │                  ┌──────┴─┴─┴─┴───────┐   
-│ │                │ │        ▽       │         ▽                │                  │                    │   
-│ │                │ │                │      ┌─────────────┐     │                  │   ┌────────────┐   │   
-│ │                ◀─┼──CMD port 8300─┼──────▶             ├─────┼────Audio out─────┼───▶            │   │   
-│ │                │ │                │      │    VARA     │     │                  │   │ Soundcard  │   │   
-│ │                ◀─┼─DATA port 8301─┼──────▶             ◀─────┼─────Audio in─────┼───┤            │   │   
-│ │                │ │                │      └─────────────┘     │                  │   └────────────┘   │   
-│ │                │ │                │                          │                  │                    │   
-│ │                │ │                │      ┌─────────────┐     │                  │   ┌────────────┐   │   
-│ │                │ │                │      │             │     │                  │   │            │   │   
-│ │                ◀─┼───port 4532────┼──────▶   rigctld   │─────┼──────usb─────────┼───▶    PTT     │   │   
-│ │                │ │                │      │             │     │                  │   │            │   │   
-│ │                │ │                │      └─────────────┘     │                  │   └────────────┘   │   
-│ └────────────────┘ │                │                          │                  │                    │   
-│                    │      WiFi      │                          │       USB        │                    │   
-│    iPhone (iOS)    │                │    Headless Computer     │                  │ Sound Card Adapter │   
-└────────────────────┘                └──────────────────────────┘                  └────────────────────┘   
+┌────────────────────┐                ┌──────────────────────────┐              ┌────────────────────┐
+│ ┌────────────────┐ │                │      ┌──────────────┐    │              │                    │
+│ │                │ │                │      │              │    │              │                    │
+│ │                │ │                │      │ ctrl         │    │              │                    │
+│ │                ├─┼────port 8273───┼──────▶              │    │              │       Radio        │
+│ │                │ │                │      │   varanny    │    │              │                    │
+│ │                │ │        ┌───────┼──────┤              │    │              │                    │
+│ │                │ │        │       │      │              │    │              │                    │
+│ │                │ │        │       │      │    manage    │    │              └──────┬─┬─┬─┬───────┘
+│ │                │ │        │       │      └──┬─────────┬─┘    │                     │ │ │ │        
+│ │                │ │        │       │         │         │      │                     │ │ │ │ TX     
+│ │                │ │     DNS-SD     │         │         │      │            Headset  │ │ │ │ RX     
+│ │                │ │     Service    │         │         ▽      │             Jack    │ │ │ │ PTT    
+│ │                │ │  Announcement  │         │  ┌ ─ ─ ─ ─ ─   │                     │ │ │ │ GND    
+│ │                │ │        │       │         │    VARA.ini │┐ │                     │ │ │ │        
+│ │   RadioMail    │ │        │       │         │  └ ─ ─ ─ ─ ─   │                     │ │ │ │        
+│ │                │ │        │       │         │    └ ─ ─ ─ ─ ┘ │              ┌──────┴─┴─┴─┴───────┐
+│ │                │ │        ▽       │         ▽                │              │                    │
+│ │                │ │                │      ┌─────────────┐     │              │   ┌────────────┐   │
+│ │                ◀─┼──CMD port 8300─┼──────▶             ├─────┼──Audio out───┼───▶            │   │
+│ │                │ │                │      │    VARA     │     │              │   │ Soundcard  │   │
+│ │                ◀─┼─DATA port 8301─┼──────▶             ◀─────┼───Audio in───┼───┤            │   │
+│ │                │ │                │      └─────────────┘     │              │   └────────────┘   │
+│ │                │ │                │                          │              │                    │
+│ │                │ │                │      ┌─────────────┐     │              │   ┌────────────┐   │
+│ │                │ │                │      │             │     │              │   │            │   │
+│ │                ◀─┼───port 4532────┼──────▶   rigctld   │─────┼────usb───────┼───▶    PTT     │   │
+│ │                │ │                │      │             │     │              │   │            │   │
+│ │                │ │                │      └─────────────┘     │              │   └────────────┘   │
+│ └────────────────┘ │                │                          │              │                    │
+│                    │      WiFi      │                          │     USB      │                    │
+│    iPhone (iOS)    │                │    Headless Computer     │              │ Sound Card Adapter │
+└────────────────────┘                └──────────────────────────┘              └────────────────────┘
 ```
 
 `varanny` steps in to address these limitations, acting as a 'nanny' for VARA. It offers two primary capabilities:
@@ -45,38 +45,39 @@
 ## Service Announcement
 `varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and command port configured for that instance. In VARA modems, the data port number is always one more than the command port number.
 
-The service are broadcasted as `_varafm-modem._tcp` and `_varahf-modem._tcp` depending on the modem type and contain a TXT entry with `;` separated options.
+The service are broadcasted as `_vara-modem._tcp` and contain a TXT entry with `;` separated options.
 
-### Supported options
+### Supported TXT options
+* `type=` type of modem, `fm` or `hf`.
 * `launchport=` port of varanny launcher.
 * `catport=` port of the cat control daemon, if any.
-* `catdialect` type of cat control daemon. Currently only `hamlib` is supported.
+* `catdialect=` type of cat control daemon. Currently only `hamlib` is supported.
 
 To test if the service is running, you can validate from a terminal on macOS
 
 ```
-$ dns-sd -B _varahf-modem._tcp
-Browsing for _varahf-modem._tcp
+$ dns-sd -B _vara-modem._tcp
+Browsing for _vara-modem._tcp
 DATE: ---Tue 24 Oct 2023---
 18:20:18.020  ...STARTING...
-Timestamp     A/R    Flags  if Domain               Service Type         Instance Name
-18:20:18.021  Add        3   1 local.               _varahf-modem._tcp.  VARA HF Modem
-18:20:18.021  Add        3   6 local.               _varahf-modem._tcp.  VARA HF Modem
-18:20:18.021  Add        2   7 local.               _varahf-modem._tcp.  VARA HF Modem
+Timestamp     A/R    Flags  if Domain               Service Type       Instance Name
+18:20:18.021  Add        3   1 local.               _vara-modem._tcp.  VARA HF Modem
+18:20:18.021  Add        3   6 local.               _vara-modem._tcp.  VARA HF Modem
+18:20:18.021  Add        2   7 local.               _vara-modem._tcp.  VARA HF Modem
 ```
 
 and resolve the service address with
 
 ```
-$ dns-sd -L "VARA HF Modem" _varahf-modem._tcp local
-Lookup VARA HF Modem._varahf-modem._tcp.local
+$ dns-sd -L "VARA HF Modem" _vara-modem._tcp local
+Lookup VARA HF Modem._vara-modem._tcp.local
 DATE: ---Tue 24 Oct 2023---
 18:21:15.325  ...STARTING...
-18:21:15.326  VARA\032HF\032Modem._varahf-modem._tcp.local. can be reached at cervin.local.local.:8400 (interface 1) Flags: 1
- launchport=8273\; catport=4532\; catdialect=hamlib\;
+18:21:15.326  VARA\032HF\032Modem._vara-modem._tcp.local. can be reached at cervin.local.local.:8400 (interface 1) Flags: 1
+ type=hf\; launchport=8273\; catport=4532\; catdialect=hamlib\;
 ```
 
-The service accnouncment has been inspired by https://github.com/hessu/aprs-specs/blob/master/TCP-KISS-DNS-SD.md
+The service announcement has been inspired by https://github.com/hessu/aprs-specs/blob/master/TCP-KISS-DNS-SD.md
 
 ## Remote Management
 `varanny` allows client applications to remotely start and stop the VARA program. This is particularly useful in headless applications, especially when VARA FM and VARA HF share the same sound card interface. Furthermore, VARA, when running on a *nix system via Wine, fails to rebind to its ports after a connection is closed. This means that the VARA application must be restarted after each connection, and `varanny` facilitates this process. This particular issue has been discussed in this [thread](https://groups.io/g/VARA-MODEM/topic/lunchbag_portable_hf_mail/97360073).
@@ -92,7 +93,7 @@ Connections to `varanny` are session-oriented. A client connects, requests to st
 * `version` - Returns varanny version
 
 ### Multiple Configurations
-VARA doesn't offer command line configuration options. Therefore, changes like sound card name, PTT com port, etc., need to be made through its GUI. `varnnay` can help manage multiple configurations for you. It automatically swaps the `.ini` configuration file that VARA reads, allowing for seamless configuration changes before each session and restoring the default settings afterward. To create a new configuration, follow these steps:  
+VARA doesn't offer command line configuration options. Therefore, changes like sound card name, PTT com port, etc., need to be made through its GUI. `varanny` can help manage multiple configurations for you. It automatically swaps the `.ini` configuration file that VARA reads, allowing for seamless configuration changes before each session and restoring the default settings afterward. To create a new configuration, follow these steps:  
 
 1. Open the VARA application. 
 1. Adjust the parameters to your preference. 
@@ -229,32 +230,25 @@ To validate your configuration, the easiest is to run an interactive session aga
 On macOS
 
 ```
-$ dns-sd -B _varafm-modem._tcp
-Browsing for _varafm-modem._tcp
+$ dns-sd -B _vara-modem._tcp
+Browsing for _vara-modem._tcp
 DATE: ---Mon 06 Nov 2023---
 16:15:31.372  ...STARTING...
 Timestamp     A/R    Flags  if Domain               Service Type         Instance Name
-16:15:31.373  Add        3   7 local.               _varafm-modem._tcp.  THD74
-16:15:31.373  Add        3   7 local.               _varafm-modem._tcp.  IC705FM
-
-$ dns-sd -B _varahf-modem._tcp
-Browsing for _varahf-modem._tcp
-DATE: ---Mon 06 Nov 2023---
-16:14:35.356  ...STARTING...
-Timestamp     A/R    Flags  if Domain               Service Type         Instance Name
-16:14:35.574  Add        3   7 local.               _varahf-modem._tcp.  IC705HF
+16:15:31.373  Add        3   7 local.               _vara-modem._tcp.  THD74
+16:15:31.373  Add        3   7 local.               _vara-modem._tcp.  IC705FM
 ```
 
 On Linux
 
 ```
-$ avahi-browse -v _varafm-modem._tcp
+$ avahi-browse -v _vara-modem._tcp
 Server version: avahi 0.8; Host name: t4.local
 E Ifce Prot Name                                          Type                 Domain
-+ wlp2s0 IPv6 IC705FM                                       _varafm-modem._tcp   local
-+ wlp2s0 IPv6 THD74FM                                       _varafm-modem._tcp   local
-+ wlp2s0 IPv4 THD74FM                                       _varafm-modem._tcp   local
-+ wlp2s0 IPv4 IC705FM                                       _varafm-modem._tcp   local
++ wlp2s0 IPv6 IC705FM                                       _vara-modem._tcp   local
++ wlp2s0 IPv6 THD74FM                                       _vara-modem._tcp   local
++ wlp2s0 IPv4 THD74FM                                       _vara-modem._tcp   local
++ wlp2s0 IPv4 IC705FM                                       _vara-modem._tcp   local
 : Cache exhausted
 : All for now
 ```
@@ -264,42 +258,42 @@ E Ifce Prot Name                                          Type                 D
 On macOS
 
 ```
-$ dns-sd -L "IC705FM" _varafm-modem._tcp local
-Lookup IC705FM._varafm-modem._tcp.local
+$ dns-sd -L "IC705FM" _vara-modem._tcp local
+Lookup IC705FM._vara-modem._tcp.local
 DATE: ---Mon 06 Nov 2023---
  16:58:59.059  ...STARTING...
- 16:58:59.059  IC705FM._varafm-modem._tcp.local. can be reached at t4windoz.local.:8300 (interface 7)
- launchport=8273\;
+ 16:58:59.059  IC705FM._vara-modem._tcp.local. can be reached at t4windoz.local.:8300 (interface 7)
+ type=fm\; launchport=8273\;
 ```
 
 Or on Linux
 
 ```
-$ avahi-browse -r _varafm-modem._tcp
-+ wlp2s0 IPv6 IC705FM                                       _varafm-modem._tcp   local
-+ wlp2s0 IPv6 THD74FM                                       _varafm-modem._tcp   local
-+ wlp2s0 IPv4 THD74FM                                       _varafm-modem._tcp   local
-+ wlp2s0 IPv4 IC705FM                                       _varafm-modem._tcp   local
-= wlp2s0 IPv6 IC705FM                                       _varafm-modem._tcp   local
+$ avahi-browse -r _vara-modem._tcp
++ wlp2s0 IPv6 IC705FM                                       _vara-modem._tcp   local
++ wlp2s0 IPv6 THD74FM                                       _vara-modem._tcp   local
++ wlp2s0 IPv4 THD74FM                                       _vara-modem._tcp   local
++ wlp2s0 IPv4 IC705FM                                       _vara-modem._tcp   local
+= wlp2s0 IPv6 IC705FM                                       _vara-modem._tcp   local
    hostname = [t4windoz.local]
    address = [192.168.137.1]
    port = [8300]
-   txt = ["launchport=8273;"]
-= wlp2s0 IPv6 THD74FM                                       _varafm-modem._tcp   local
+   txt = ["type=fm;launchport=8273;"]
+= wlp2s0 IPv6 THD74FM                                       _vara-modem._tcp   local
    hostname = [t4windoz.local]
    address = [192.168.137.1]
    port = [8300]
-   txt = ["launchport=8273;"]
-= wlp2s0 IPv4 THD74FM                                       _varafm-modem._tcp   local
+   txt = ["type=fm;launchport=8273;"]
+= wlp2s0 IPv4 THD74FM                                       _vara-modem._tcp   local
    hostname = [t4windoz.local]
    address = [192.168.137.1]
    port = [8300]
-   txt = ["launchport=8273;"]
-= wlp2s0 IPv4 IC705FM                                       _varafm-modem._tcp   local
+   txt = ["type=fm;launchport=8273;"]
+= wlp2s0 IPv4 IC705FM                                       _vara-modem._tcp   local
    hostname = [t4windoz.local]
    address = [192.168.137.1]
    port = [8300]
-   txt = ["launchport=8273;"]
+   txt = ["type=fm;launchport=8273;"]
 ```
 
 4. Connect to `varanny` instance. Replace `t4windoz.local` with your host name returned in the above command.
