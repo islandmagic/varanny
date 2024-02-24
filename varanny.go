@@ -30,6 +30,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cakturk/go-netstat/netstat"
 	"github.com/grandcat/zeroconf"
 )
 
@@ -52,6 +53,7 @@ type Modem struct {
 	AudioInputName string  `json:"AudioInputName"`
 	CatCtrl        CatCtrl `json:"CatCtrl,omitempty"`
 	mu             sync.Mutex
+	Port           int
 }
 type CatCtrl struct {
 	Port    int    `json:"Port"`
@@ -62,6 +64,20 @@ type CatCtrl struct {
 type program struct {
 	ctx context.Context
 	*Config
+}
+
+// This method checks the system to see if something is binding to the port
+func isPortInUse(port int) (bool, error) {
+	tcpSocks, err := netstat.TCPSocks(netstat.NoopFilter)
+	if err != nil {
+		return false, err
+	}
+	for _, s := range tcpSocks {
+		if s.LocalAddr.Port == uint16(port) && s.State == netstat.Listen {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func assertExecutable(path string) error {
@@ -109,6 +125,18 @@ func (p *program) validateConfig() {
 			if err != nil {
 				log.Fatal(err)
 			}
+		}
+
+		// Figure out .ini file name for this modem
+		iniFilePath, err := specifiedIniConfigPath(modem)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Lookup port
+		modem.Port, err = GetPort(iniFilePath)
+		if err != nil {
+			log.Fatal("ERROR port number not found in " + iniFilePath)
 		}
 	}
 }
@@ -384,8 +412,21 @@ func handleConnection(conn net.Conn, p *program) {
 						log.Println(err)
 						return
 					} else {
-						// Wait for modem to start and bind to their ports
-						time.Sleep(3 * time.Second)
+						// Wait until VARA has binded to its  port
+						if modem.Port != 0 {
+							for i := 0; i < 10; i++ {
+								// Check the OS to see if port is in use. Do not try to connect as VARA won't be able to rebind if
+								// we connect and close
+								found, err := isPortInUse(modem.Port)
+								if err != nil {
+									log.Println(err)
+								}
+								if found {
+									break
+								}
+								time.Sleep(1 * time.Second)
+							}
+						}
 						conn.Write([]byte("OK\n"))
 					}
 				} else {
@@ -516,31 +557,23 @@ func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
 				log.Fatal("Unknown modem type: ", modemType)
 			}
 
-			// Figure out .ini file name for this modem
-			iniFilePath, err := specifiedIniConfigPath(&modem)
-			if err != nil {
-				log.Fatal(err)
-			}
+			if modem.Port != 0 {
+				// Advertise the modem using the legacy service name for backwards compatibility
+				// TODO: Deprecate in the future when all clients have been updated
+				legacyServiceNameServer, err := zeroconf.Register(modem.Name, name, "local.", modem.Port, options, nil)
+				if err != nil {
+					log.Fatal(err)
+				}
+				servers = append(servers, legacyServiceNameServer)
 
-			// Lookup port
-			port, err := GetPort(iniFilePath)
-			if err != nil {
-				log.Fatal("ERROR port number not found in " + iniFilePath)
+				server, err := zeroconf.Register(modem.Name, "_vara-modem._tcp", "local.", modem.Port, options, nil)
+				if err != nil {
+					log.Fatal(err)
+				}
+				servers = append(servers, server)
+			} else {
+				log.Fatal("Port not found for modem", modem.Name)
 			}
-
-			// Advertise the modem using the legacy service name for backwards compatibility
-			// TODO: Deprecate in the future when all clients have been updated
-			legacyServiceNameServer, err := zeroconf.Register(modem.Name, name, "local.", port, options, nil)
-			if err != nil {
-				log.Fatal(err)
-			}
-			servers = append(servers, legacyServiceNameServer)
-
-			server, err := zeroconf.Register(modem.Name, "_vara-modem._tcp", "local.", port, options, nil)
-			if err != nil {
-				log.Fatal(err)
-			}
-			servers = append(servers, server)
 		}
 	}
 	return servers
