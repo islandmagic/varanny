@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/gordonklaus/portaudio v0.0.0-20230709114228-aafa478834f5 // indirect
 	github.com/miekg/dns v1.1.27 // indirect
