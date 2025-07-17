@@ -1,6 +1,6 @@
 # varanny
 
-`varanny` is an enhancement tool for VARA, a widely used software modem in amateur radio digital transmissions. VARA functions through two TCP ports - one for commands, the other for data. This TCP/IP interaction enables the VARA modem software to run on a radio-connected, headless computer, while client applications operate on a separate network device. However, since VARA wasn't designed to function as a service, this setup comes with certain limitations.
+`varanny` is a lightweight service wrapper for the VARA software modem, designed to simplify headless and remote amateur radio operations. It enables automatic service discovery over the network using DNS-SD, allowing clients like RadioMail to locate and connect to VARA instances without manual configuration. `varanny` also manages the starting and stopping of VARA and optional rig control agents, handles multiple modem profiles by swapping .ini config files, and ensures reliable operation in environments like Wine where VARA may not rebind to ports correctly. It turns VARA into a more flexible, network-friendly service.
 
 ## Overview
 
@@ -39,8 +39,6 @@
 │    iPhone (iOS)    │                │    Headless Computer     │              │ Sound Card Adapter │
 └────────────────────┘                └──────────────────────────┘              └────────────────────┘
 ```
-
-`varanny` steps in to address these limitations, acting as a 'nanny' for VARA. It offers two primary capabilities:
 
 ## Service Announcement
 `varanny` announces the service through DNS Service Discovery, enabling clients to discover an active VARA instance and automatically retrieve the IP and command port configured for that instance. In VARA modems, the data port number is always one more than the command port number.
@@ -216,9 +214,9 @@ Follow these guides and watch the videos to learn how to utilize `varanny` to cr
 * [VARA HotSpot Windows Setup Guide](https://github.com/islandmagic/varanny/wiki/VARA-HotSpot-Windows-Setup-Guide)
 * [VARA HotSpot Linux Setup Guide](https://github.com/islandmagic/varanny/wiki/VARA-HotSpot-Linux-Setup-Guide)
 
-[![Video](https://img.youtube.com/vi/7bOmWUk1XhM/maxresdefault.jpg)](https://www.youtube.com/watch?v=7bOmWUk1XhM)
+[![Video](https://img.youtube.com/vi/7bOmWUk1XhM/maxresdefault.jpg)](https://radiomail.app/s9/portable-vara-fm-hotspot/)
 
-[![Video](https://img.youtube.com/vi/kPDTH4L319Q/maxresdefault.jpg)](https://www.youtube.com/watch?v=kPDTH4L319Q)
+[![Video](https://img.youtube.com/vi/kPDTH4L319Q/maxresdefault.jpg)](https://radiomail.app/s9/portable-vara-hf-hotspot/)
 
 ## Troubleshooting
 
@@ -328,6 +326,11 @@ stop
 OK
 Connection closed by foreign host.
 ```
+
+### Support
+
+If you encounter a bug, please open an issue on GitHub.
+For questions, help, or sharing your configurations, visit the [forum](https://forum.islandmagic.co/c/varanny)
 
 ### Logs
 `varanny` logs output to the standard system logs.
