@@ -214,10 +214,6 @@ Follow these guides and watch the videos to learn how to utilize `varanny` to cr
 * [VARA HotSpot Windows Setup Guide](https://github.com/islandmagic/varanny/wiki/VARA-HotSpot-Windows-Setup-Guide)
 * [VARA HotSpot Linux Setup Guide](https://github.com/islandmagic/varanny/wiki/VARA-HotSpot-Linux-Setup-Guide)
 
-[![Video](https://img.youtube.com/vi/7bOmWUk1XhM/maxresdefault.jpg)](https://radiomail.app/s9/portable-vara-fm-hotspot/)
-
-[![Video](https://img.youtube.com/vi/kPDTH4L319Q/maxresdefault.jpg)](https://radiomail.app/s9/portable-vara-hf-hotspot/)
-
 ## Troubleshooting
 
 To validate your configuration, the easiest is to run an interactive session against `varanny` from another computer on the same network.
