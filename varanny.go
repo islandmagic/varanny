@@ -128,7 +128,7 @@ func (p *program) validateConfig() {
 			}
 		}
 
-		var varaDefaultConfigFile := modem.DefaultConfig
+		var varaDefaultConfigFile = modem.DefaultConfig
 		if varaDefaultConfigFile != "" {
 			err := assertConfigFile(varaDefaultConfigFile)
 			if err != nil {
