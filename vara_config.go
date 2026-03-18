@@ -36,7 +36,13 @@ func GetPort(path string) (int, error) {
 	return section.Key("TCP Command Port").Int()
 }
 
-func DefaultVaraConfigFile(fullexecpath string) (string, error) {
+// DefaultVaraConfigFile returns the default VARA/VARAFM .ini file path.
+// If defaultConfigOverride is non-empty, it is returned as-is.
+func DefaultVaraConfigFile(fullexecpath string, defaultConfigOverride string) (string, error) {
+	if defaultConfigOverride != "" {
+		return defaultConfigOverride, nil
+	}
+
 	dir, execname := filepath.Split(fullexecpath)
 	switch execname {
 	case "VARA.exe":
