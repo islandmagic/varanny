@@ -7,6 +7,7 @@ require (
 	github.com/go-ini/ini v1.67.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/kardianos/service v1.2.2
+	golang.org/x/sys v0.11.0
 )
 
 require (
@@ -19,5 +20,4 @@ require (
 	github.com/tyranron/daemonigo v0.3.1 // indirect
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa // indirect
-	golang.org/x/sys v0.11.0 // indirect
 )

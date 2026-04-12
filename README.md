@@ -89,6 +89,18 @@ Connections to `varanny` are session-oriented. A client connects, requests to st
 * `monitor <modem name>` - Connects to the input audio interface defined for this modem. Returns the interface name, followed by continous stream of audio level in dbFS.
 * `config` - Echo the `varanny.json` config file content
 * `version` - Returns varanny version
+* `shutdown` - Power off the machine (Linux only; see below)
+
+### Remote host shutdown (Linux)
+
+When `"EnableRemoteShutdown": true` is set in `varanny.json`, the `shutdown` command replies `OK` and then requests a kernel power-off via `reboot(2)`. The process does not run as root; it needs the **`CAP_SYS_BOOT`** capability. Under systemd, use a dedicated service user and a unit snippet such as:
+
+```ini
+CapabilityBoundingSet=CAP_SYS_BOOT
+AmbientCapabilities=CAP_SYS_BOOT
+```
+
+If the capability is missing, the log will show a permission error after `OK`. Anyone who can reach the command port can shut down the host—use a firewall or private network as appropriate.
 
 ### Multiple Configurations
 VARA doesn't offer command line configuration options. Therefore, changes like sound card name, PTT com port, etc., need to be made through its GUI. `varanny` can help manage multiple configurations for you. It automatically swaps the `.ini` configuration file that VARA reads, allowing for seamless configuration changes before each session and restoring the default settings afterward. To create a new configuration, follow these steps:  
