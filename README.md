@@ -226,6 +226,9 @@ Follow these guides and watch the videos to learn how to utilize `varanny` to cr
 * [VARA HotSpot Windows Setup Guide](https://github.com/islandmagic/varanny/wiki/VARA-HotSpot-Windows-Setup-Guide)
 * [VARA HotSpot Linux Setup Guide](https://github.com/islandmagic/varanny/wiki/VARA-HotSpot-Linux-Setup-Guide)
 
+Scripts to create a complete headless VARA solution on a stick PC
+* [VARA on a stick](https://github.com/islandmagic/vara-on-a-stick)
+
 ## Troubleshooting
 
 To validate your configuration, the easiest is to run an interactive session against `varanny` from another computer on the same network.
