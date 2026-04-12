@@ -43,6 +43,7 @@ type Config struct {
 	Delay                   *int    `json:"Delay"` // allow 0 value, defaults to 10
 	Modems                  []Modem `json:"Modems"`
 	Port                    int     `json:"Port"`
+	EnableRemoteShutdown bool `json:"EnableRemoteShutdown,omitempty"`
 }
 type Modem struct {
 	Name           string  `json:"Name"`
@@ -518,6 +519,18 @@ func handleConnection(conn net.Conn, p *program) {
 							conn.Write([]byte("  CatCtrl.Dialect: " + modem.CatCtrl.Dialect + "\n"))
 							conn.Write([]byte("  CatCtrl.Cmd: " + modem.CatCtrl.Cmd + "\n"))
 							conn.Write([]byte("  CatCtrl.Args: " + modem.CatCtrl.Args + "\n"))
+						}
+					case "shutdown":
+						if !p.EnableRemoteShutdown {
+							conn.Write([]byte("ERROR remote shutdown disabled\n"))
+						} else {
+							conn.Write([]byte("OK\n"))
+							go func() {
+								time.Sleep(300 * time.Millisecond)
+								if err := hostPowerOff(); err != nil {
+									log.Println("host poweroff:", err)
+								}
+							}()
 						}
 					default:
 						conn.Write([]byte("Invalid command\n"))
