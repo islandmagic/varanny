@@ -31,10 +31,10 @@ jobs:
 
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.21.4
         id: go
@@ -54,7 +54,7 @@ jobs:
           zip "varanny-${{ matrix.os }}-${{ matrix.arch }}.zip" "varanny${{ matrix.ext }}" "varanny.json"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: varanny-${{ matrix.os }}-${{ matrix.arch }}.zip
           path: varanny-${{ matrix.os }}-${{ matrix.arch }}.zip
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Create Release
         id: create_release
@@ -78,7 +78,7 @@ jobs:
           prerelease: false
 
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
