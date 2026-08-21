@@ -267,12 +267,29 @@ func handleConnection(conn net.Conn, p *program) {
 			if err != nil {
 				log.Println("Shutdown modem process gracefully failed, killing")
 				modemCmd.Process.Kill()
+				modemCmd.Process.Wait()
+				modemCmd.Process.Release()
+			} else {
+				// Wait for process to exit with timeout
+				done := make(chan error, 1)
+				go func() {
+					_, err := modemCmd.Process.Wait()
+					done <- err
+				}()
+
+				// Give the process time to exit gracefully
+				select {
+				case err := <-done:
+					if err != nil {
+						log.Println("Warning: awaiting termination of modem process failed:", err)
+					}
+				case <-time.After(10 * time.Second):
+					log.Println("Modem process did not terminate gracefully, killing")
+					modemCmd.Process.Kill()
+					modemCmd.Process.Wait()
+				}
+				modemCmd.Process.Release()
 			}
-			processState, err := modemCmd.Process.Wait()
-			if err != nil || processState.Success() {
-				log.Println("Warning: awaiting termination of modem process failed")
-			}
-			modemCmd.Process.Release()
 		}
 
 		if configPath != "" {
@@ -287,12 +304,29 @@ func handleConnection(conn net.Conn, p *program) {
 			if err != nil {
 				log.Println("Shutdown cat control process gracefully failed, killing")
 				catCtrlCmd.Process.Kill()
+				catCtrlCmd.Process.Wait()
+				catCtrlCmd.Process.Release()
+			} else {
+				// Wait for process to exit with timeout
+				done := make(chan error, 1)
+				go func() {
+					_, err := catCtrlCmd.Process.Wait()
+					done <- err
+				}()
+
+				// Give the process time to exit gracefully
+				select {
+				case err := <-done:
+					if err != nil {
+						log.Println("Warning: awaiting termination of cat control process failed:", err)
+					}
+				case <-time.After(5 * time.Second):
+					log.Println("Cat control process did not terminate gracefully, killing")
+					catCtrlCmd.Process.Kill()
+					catCtrlCmd.Process.Wait()
+				}
+				catCtrlCmd.Process.Release()
 			}
-			processState, err := catCtrlCmd.Process.Wait()
-			if err != nil || processState.Success() {
-				log.Println("Warning: awaiting termination of cat control process failed")
-			}
-			catCtrlCmd.Process.Release()
 		}
 
 		if modem != nil {
