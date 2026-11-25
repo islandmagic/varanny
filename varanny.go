@@ -30,8 +30,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brutella/dnssd"
 	"github.com/cakturk/go-netstat/netstat"
-	"github.com/grandcat/zeroconf"
 )
 
 // This gets set at build time derived from the git tag
@@ -151,11 +151,11 @@ func (p *program) validateConfig() {
 	}
 }
 
-func addOption(options []string, key string, value string) []string {
+// TXT values keep the trailing ';' that clients already parse ("launchport=8273;").
+func addOption(options map[string]string, key string, value string) {
 	if value != "" {
-		options = append(options, key+"="+value+";")
+		options[key] = value + ";"
 	}
-	return options
 }
 
 func getConfigPath() (string, error) {
@@ -545,62 +545,70 @@ func handleConnection(conn net.Conn, p *program) {
 	}
 }
 
-// Returns array of zeroconf servers
-func advertiseServices(modems []Modem, port int) (servers []*zeroconf.Server) {
-	var name string
-
+// Advertises the modems over DNS-SD until ctx is done.
+//
+// This needs a full mDNS responder: the host's A/AAAA records are sent with a 120s TTL, and
+// once they expire clients re-resolve the SRV target hostname directly. A responder that
+// only answers service queries (as grandcat/zeroconf does) makes the modem vanish from
+// clients a couple of minutes after they first found it.
+func advertiseServices(ctx context.Context, modems []Modem, port int) {
 	log.Println("Advertising DNS-SD services")
 	printMulticastInterfaces()
 
+	rp, err := dnssd.NewResponder()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for _, modem := range modems {
-		if modem.Cmd != "" {
-			options := []string{}
+		if modem.Cmd == "" {
+			continue
+		}
+		options := map[string]string{}
+		addOption(options, "launchport", strconv.Itoa(port))
+		if modem.CatCtrl.Port != 0 {
+			addOption(options, "catport", strconv.Itoa(modem.CatCtrl.Port))
+			addOption(options, "catdialect", modem.CatCtrl.Dialect)
+		}
 
-			options = addOption(options, "launchport", strconv.Itoa(port))
+		// Advertise the modem using the legacy service name for backwards compatibility
+		// TODO: Deprecate in the future when all clients have been updated
+		var legacyName string
+		switch modem.Type {
+		case "fm":
+			legacyName = "_varafm-modem._tcp"
+		case "hf":
+			legacyName = "_varahf-modem._tcp"
+		default:
+			log.Fatal("Unknown modem type: ", modem.Type)
+		}
+		addOption(options, "type", modem.Type)
 
-			if modem.CatCtrl.Port != 0 {
-				options = addOption(options, "catport", strconv.Itoa(modem.CatCtrl.Port))
-				options = addOption(options, "catdialect", modem.CatCtrl.Dialect)
+		if modem.Port == 0 {
+			log.Fatal("Port not found for modem", modem.Name)
+		}
+		for _, serviceType := range []string{legacyName, "_vara-modem._tcp"} {
+			service, err := dnssd.NewService(dnssd.Config{
+				Name:   modem.Name,
+				Type:   serviceType,
+				Domain: "local",
+				Port:   modem.Port,
+				Text:   options,
+			})
+			if err != nil {
+				log.Fatal(err)
 			}
-
-			// Advertise the modem based on its type
-			// TODO: Deprecate in the future when all clients have been updated
-			switch modem.Type {
-			case "fm":
-				name = "_varafm-modem._tcp"
-			case "hf":
-				name = "_varahf-modem._tcp"
-			default:
-				log.Fatal("Unknown modem type: ", modem.Type)
-			}
-
-			modemType := strings.ToLower(modem.Type)
-			if modemType == "hf" || modemType == "fm" {
-				options = addOption(options, "type", modemType)
-			} else {
-				log.Fatal("Unknown modem type: ", modemType)
-			}
-
-			if modem.Port != 0 {
-				// Advertise the modem using the legacy service name for backwards compatibility
-				// TODO: Deprecate in the future when all clients have been updated
-				legacyServiceNameServer, err := zeroconf.Register(modem.Name, name, "local.", modem.Port, options, nil)
-				if err != nil {
-					log.Fatal(err)
-				}
-				servers = append(servers, legacyServiceNameServer)
-
-				server, err := zeroconf.Register(modem.Name, "_vara-modem._tcp", "local.", modem.Port, options, nil)
-				if err != nil {
-					log.Fatal(err)
-				}
-				servers = append(servers, server)
-			} else {
-				log.Fatal("Port not found for modem", modem.Name)
+			if _, err := rp.Add(service); err != nil {
+				log.Fatal(err)
 			}
 		}
 	}
-	return servers
+
+	go func() {
+		if err := rp.Respond(ctx); err != nil && ctx.Err() == nil {
+			log.Fatal(err)
+		}
+	}()
 }
 
 // Print out all the broadcast network interfaces
@@ -623,12 +631,7 @@ func printMulticastInterfaces() {
 }
 
 func (p *program) run() {
-	servers := advertiseServices(p.Modems, p.Port)
-	defer func() {
-		for _, server := range servers {
-			server.Shutdown()
-		}
-	}()
+	advertiseServices(p.ctx, p.Modems, p.Port)
 
 	// Start the launcher server
 	portStr := strconv.Itoa(p.Port)
